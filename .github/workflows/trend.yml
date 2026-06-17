@@ -1,0 +1,40 @@
+name: trend-pull
+
+# Runs daily (Apple + Kworb both refresh ~daily, so this matches source freshness).
+# Also runnable on demand from the Actions tab.
+on:
+  schedule:
+    - cron: "0 13 * * *"   # 13:00 UTC daily — adjust to taste
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "ISO alpha-2 country code"
+        default: "us"
+
+permissions:
+  contents: write          # needed to commit the refreshed JSON back to the repo
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests pandas lxml
+
+      - name: Pull trends
+        run: python trend_pull.py --country "${{ github.event.inputs.country || 'us' }}" --limit 100
+
+      - name: Commit data
+        run: |
+          git config user.name  "trend-bot"
+          git config user.email "trend-bot@users.noreply.github.com"
+          git add trend_latest.json
+          # Only commit if something actually changed.
+          git diff --staged --quiet || git commit -m "data: refresh $(date -u +%FT%TZ)"
+          git push
