@@ -15,6 +15,7 @@ Deps: pip install requests pandas lxml
 
 import argparse
 import datetime as dt
+import io
 import json
 import re
 import sys
@@ -66,9 +67,24 @@ def fetch_kworb(country: str) -> pd.DataFrame:
     url = KWORB_URL.format(country=country)
     r = requests.get(url, headers=HEADERS, timeout=20)
     r.raise_for_status()
-    # Kworb publishes one clean HTML table; pandas reads it directly.
-    table = pd.read_html(r.text)[0]
+    # Wrap in StringIO — newer pandas rejects a raw HTML string here.
+    tables = pd.read_html(io.StringIO(r.text))
+    if not tables:
+        raise RuntimeError(f"No tables found on Kworb page: {url}")
+    # Pick the table that actually has the chart columns (don't assume index 0).
+    table = None
+    for t in tables:
+        cols = [str(c).strip() for c in t.columns]
+        if "Artist and Title" in cols or any("Artist" in c for c in cols):
+            table = t
+            break
+    if table is None:
+        table = tables[0]
     table.columns = [str(c).strip() for c in table.columns]
+    if "Artist and Title" not in table.columns:
+        raise RuntimeError(
+            f"Kworb layout changed. Columns seen: {list(table.columns)}"
+        )
     rows = []
     for _, row in table.iterrows():
         at = str(row.get("Artist and Title", "")).strip()
@@ -84,6 +100,8 @@ def fetch_kworb(country: str) -> pd.DataFrame:
             "artist": artist.strip(),
             "title": title.strip(),
         })
+    if not rows:
+        raise RuntimeError(f"Parsed 0 rows from Kworb table at {url}")
     df = pd.DataFrame(rows)
     df["key"] = df.apply(lambda x: norm_key(x["artist"], x["title"]), axis=1)
     return df
@@ -125,9 +143,12 @@ def main():
 
     try:
         apple = fetch_apple(args.country, args.limit)
+    except Exception as e:
+        sys.exit(f"APPLE fetch failed: {type(e).__name__}: {e}")
+    try:
         kworb = fetch_kworb(args.country)
-    except requests.HTTPError as e:
-        sys.exit(f"Fetch failed: {e}")
+    except Exception as e:
+        sys.exit(f"KWORB fetch failed: {type(e).__name__}: {e}")
 
     merged = merge(apple, kworb)
     stamp = dt.date.today().isoformat()
