@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlayMusic · Trend Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1014; --panel:#13191f; --panel2:#171f27; --line:#222c36;
+    --txt:#e6edf3; --muted:#8a97a6; --dim:#5b6675;
+    --up:#3fb950; --down:#e0883a; --flat:#5b6675; --both:#4aa3ff;
+    --hot:#1c2733;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif}
+  body{padding:22px;max-width:1180px;margin:0 auto}
+  a{color:var(--both);text-decoration:none}
+
+  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);padding-bottom:14px}
+  h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.02em;margin:0}
+  h1 .tag{color:var(--dim);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-left:4px}
+  .stamp{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);margin-left:auto}
+
+  .src{display:flex;gap:8px;align-items:center;margin:14px 0 6px;font-size:12.5px}
+  .src label{color:var(--muted);font-family:"JetBrains Mono",monospace;white-space:nowrap}
+  .src input{flex:1;min-width:220px;background:var(--panel);border:1px solid var(--line);color:var(--txt);
+    padding:7px 10px;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .src button{background:var(--both);color:#03121f;border:0;padding:7px 14px;border-radius:6px;font-weight:600;cursor:pointer;font-size:12.5px}
+  .src button:hover{filter:brightness(1.08)}
+
+  .banner{margin:10px 0;padding:9px 12px;border-radius:6px;font-size:12.5px;display:none}
+  .banner.show{display:block}
+  .banner.sample{background:#2a2310;border:1px solid #4a3c12;color:#e8c878}
+  .banner.err{background:#2a1414;border:1px solid #4a1f1f;color:#f0a0a0}
+
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 10px}
+  .controls input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);
+    padding:8px 11px;border-radius:6px;font-size:13px;min-width:200px}
+  .chip{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:20px;
+    font-size:12px;cursor:pointer;user-select:none}
+  .chip.on{background:var(--hot);border-color:var(--both);color:var(--txt)}
+  .count{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  thead th{position:sticky;top:0;background:var(--bg);text-align:left;font-size:11px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+  thead th.num,td.num{text-align:right;font-family:"JetBrains Mono",monospace}
+  tbody td{padding:9px 10px;border-bottom:1px solid #1a222b;font-size:13.5px;vertical-align:middle}
+  tbody tr:hover{background:var(--panel)}
+  tr.hot td:first-child{box-shadow:inset 3px 0 0 var(--both)}
+
+  .title{font-weight:600}
+  .artist{color:var(--muted);font-size:12.5px}
+  .genre{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);background:var(--panel2);
+    padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .mv{font-family:"JetBrains Mono",monospace;font-weight:600}
+  .mv.up{color:var(--up)} .mv.down{color:var(--down)} .mv.flat{color:var(--flat)}
+  .d7{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .d7.pos{color:var(--up)} .d7.neg{color:var(--down)}
+  .badge{font-size:10px;letter-spacing:.04em;font-weight:600;padding:2px 7px;border-radius:4px}
+  .b-both{background:#0e2942;color:var(--both);border:1px solid #1d3f5e}
+  .b-add{background:#11240f;color:var(--up);border:1px solid #1f3d1c}
+  .dash{color:var(--dim)}
+  footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.6}
+  footer code{font-family:"JetBrains Mono",monospace;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Trend Monitor <span class="tag">playmusic · apple + spotify</span></h1>
+  <div class="stamp" id="stamp">—</div>
+</header>
+
+<div class="src">
+  <label>data url</label>
+  <input id="url" placeholder="https://raw.githubusercontent.com/USER/REPO/main/trend_latest.json">
+  <button id="load">Load</button>
+</div>
+<div class="banner sample show" id="banner">Showing built-in sample data. Paste your committed <code>trend_latest.json</code> raw URL above and press Load for live numbers.</div>
+
+<div class="controls">
+  <input type="text" id="q" placeholder="Search artist or title…">
+  <span class="chip" id="f-rising" data-on="0">Rising only</span>
+  <span class="chip" id="f-both" data-on="0">Cross-platform only</span>
+  <span class="chip" id="f-genre" data-on="0" id-genre="" style="display:none"></span>
+  <span class="count" id="count"></span>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Track</th><th>Genre</th><th class="num">Apple</th><th class="num">Spotify</th>
+    <th class="num">Move</th><th class="num">7-day Δ</th><th>Signal</th>
+  </tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<footer>
+  Sources: Apple Music RSS (most-played, daily) + Kworb (Spotify daily chart, daily). Both free, no auth.
+  Freshness = last scheduled pull. <strong>Cross-platform + rising</strong> is the strongest surface-it signal;
+  <strong>Spotify-only risers</strong> are add candidates not yet on Apple.
+  Kworb is scraped third-party data — confirm its terms before any commercial build.
+</footer>
+
+<script>
+const SAMPLE = [{"key": "olivia rodrigo stupid song", "artist": "Olivia Rodrigo", "title": "stupid song", "genre": "Pop", "apple_rank": 2.0, "apple_url": "", "spotify_rank": 1.0, "spotify_pos_change": "=", "spotify_streams_delta": 481232.0, "spotify_7day_delta": 6971017.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "olivia rodrigo the cure", "artist": "Olivia Rodrigo", "title": "the cure", "genre": "Pop", "apple_rank": 5.0, "apple_url": "", "spotify_rank": 2.0, "spotify_pos_change": "=", "spotify_streams_delta": 374425.0, "spotify_7day_delta": 2119867.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "ariana grande hate that i made you love me", "artist": "Ariana Grande", "title": "hate that i made you love me", "genre": "Pop", "apple_rank": 6.0, "apple_url": "", "spotify_rank": 3.0, "spotify_pos_change": "+1", "spotify_streams_delta": 676214.0, "spotify_7day_delta": -318028.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "ella langley morgan wallen i can t love you anymore", "artist": "Ella Langley & Morgan Wallen", "title": "I Can't Love You Anymore", "genre": "Country", "apple_rank": 7.0, "apple_url": "", "spotify_rank": 9.0, "spotify_pos_change": "+2", "spotify_streams_delta": 90000.0, "spotify_7day_delta": 450000.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "olivia rodrigo drop dead", "artist": "Olivia Rodrigo", "title": "drop dead", "genre": NaN, "apple_rank": NaN, "apple_url": NaN, "spotify_rank": 4.0, "spotify_pos_change": "-1", "spotify_streams_delta": 222727.0, "spotify_7day_delta": 2307618.0, "on_both": false, "rising": true, "surface_priority": 1}, {"key": "michael jackson billie jean", "artist": "Michael Jackson", "title": "Billie Jean", "genre": NaN, "apple_rank": NaN, "apple_url": NaN, "spotify_rank": 5.0, "spotify_pos_change": "=", "spotify_streams_delta": -17688.0, "spotify_7day_delta": 30493.0, "on_both": false, "rising": true, "surface_priority": 1}, {"key": "sombr back to friends", "artist": "Sombr", "title": "back to friends", "genre": NaN, "apple_rank": NaN, "apple_url": NaN, "spotify_rank": 12.0, "spotify_pos_change": "+4", "spotify_streams_delta": 310000.0, "spotify_7day_delta": 1800000.0, "on_both": false, "rising": true, "surface_priority": 1}, {"key": "drake janice stfu", "artist": "Drake", "title": "Janice STFU", "genre": "Hip-Hop/Rap", "apple_rank": 1.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}, {"key": "drake shabang", "artist": "Drake", "title": "Shabang", "genre": "Hip-Hop/Rap", "apple_rank": 3.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}, {"key": "ella langley choosin texas", "artist": "Ella Langley", "title": "Choosin' Texas", "genre": "Country", "apple_rank": 4.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}, {"key": "taylor swift i knew it i knew you", "artist": "Taylor Swift", "title": "I Knew It, I Knew You", "genre": "Country", "apple_rank": 8.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}];
+const $ = s => document.querySelector(s);
+let DATA = [], state = {q:"", rising:false, both:false};
+
+function fmt(n){ if(n==null) return "—"; const s=n<0?"-":"+"; return s+Math.abs(Math.round(n)).toLocaleString(); }
+function rank(n){ return n==null ? '<span class="dash">—</span>' : Math.round(n); }
+function move(pc){
+  if(pc==null||pc==="") return '<span class="mv flat">·</span>';
+  if(pc==="=") return '<span class="mv flat">=</span>';
+  if(String(pc).startsWith("+")) return '<span class="mv up">▲'+String(pc).slice(1)+'</span>';
+  if(String(pc).startsWith("-")) return '<span class="mv down">▼'+String(pc).slice(1)+'</span>';
+  return '<span class="mv flat">'+pc+'</span>';
+}
+function signal(r){
+  if(r.on_both && r.rising) return '<span class="badge b-both">ON BOTH · RISING</span>';
+  if(r.on_both) return '<span class="badge b-both">ON BOTH</span>';
+  if(r.spotify_rank!=null && r.apple_rank==null) return '<span class="badge b-add">ADD CANDIDATE</span>';
+  return '<span class="dash">—</span>';
+}
+
+function render(){
+  const q = state.q.toLowerCase();
+  let rows = DATA.filter(r=>{
+    if(state.rising && !r.rising) return false;
+    if(state.both && !r.on_both) return false;
+    if(q && !((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  rows.sort((a,b)=>(b.surface_priority||0)-(a.surface_priority||0)
+    || (a.apple_rank??999)-(b.apple_rank??999)
+    || (a.spotify_rank??999)-(b.spotify_rank??999));
+  $("#rows").innerHTML = rows.map(r=>{
+    const hot = r.on_both && r.rising ? "hot":"";
+    const d7 = r.spotify_7day_delta;
+    const d7cls = d7==null?"":(d7>=0?"pos":"neg");
+    return `<tr class="${hot}">
+      <td><div class="title">${r.title||"—"}</div><div class="artist">${r.artist||"—"}</div></td>
+      <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
+      <td class="num">${rank(r.apple_rank)}</td>
+      <td class="num">${rank(r.spotify_rank)}</td>
+      <td class="num">${move(r.spotify_pos_change)}</td>
+      <td class="num"><span class="d7 ${d7cls}">${fmt(d7)}</span></td>
+      <td>${signal(r)}</td>
+    </tr>`;
+  }).join("");
+  $("#count").textContent = rows.length+" / "+DATA.length+" tracks";
+}
+
+function setData(payload, isSample){
+  DATA = payload.rows||[];
+  $("#stamp").textContent = isSample ? "sample data" :
+    "updated "+(payload.generated_at? new Date(payload.generated_at).toLocaleString():"?")+
+    "  ·  "+(payload.country||"").toUpperCase();
+  render();
+}
+
+async function load(url, silent){
+  const b=$("#banner");
+  try{
+    const res = await fetch(url, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json = await res.json();
+    setData(json, false);
+    b.className="banner"; b.textContent="";
+  }catch(e){
+    if(!silent){
+      b.className="banner err show";
+      b.innerHTML="Could not load that URL ("+e.message+"). Likely causes: wrong URL, or running inside the chat preview (open this page on GitHub Pages or as a downloaded file instead). Showing sample data.";
+    }
+    setData({rows:SAMPLE}, true);
+  }
+}
+
+$("#load").onclick=()=>{ const u=$("#url").value.trim(); if(u) load(u); };
+$("#q").oninput=e=>{ state.q=e.target.value; render(); };
+function chip(id,key){ const el=$(id); el.onclick=()=>{ state[key]=!state[key]; el.classList.toggle("on",state[key]); el.dataset.on=state[key]?1:0; render(); }; }
+chip("#f-rising","rising"); chip("#f-both","both");
+
+setData({rows:SAMPLE}, true);   // render sample immediately
+// When hosted next to the data (GitHub Pages / local file), auto-load live data.
+// Fails silently inside the chat preview (sandbox blocks fetch) — sample stays.
+load('trend_latest.json', true);
+</script>
+</body>
+</html>
