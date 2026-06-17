@@ -3,168 +3,124 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PlayMusic · Trend Monitor</title>
+<title>Trend Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0c1014;--panel:#13191f;--panel2:#171f27;--line:#222c36;--txt:#e6edf3;
-    --muted:#8a97a6;--dim:#5b6675;--up:#3fb950;--down:#e0883a;--flat:#5b6675;--both:#4aa3ff;--hot:#1c2733}
+    --muted:#8a97a6;--dim:#5b6675;--up:#3fb950;--down:#e0883a;--flat:#5b6675;--accent:#4aa3ff}
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif}
-  body{padding:20px;max-width:1180px;margin:0 auto}
+  body{padding:20px;max-width:1080px;margin:0 auto}
   header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
-  h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.02em;margin:0}
-  h1 .tag{color:var(--dim);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-left:4px}
+  h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:23px;letter-spacing:-.02em;margin:0}
   .stamp{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);margin-left:auto}
   .src{display:flex;gap:8px;align-items:center;margin:12px 0 4px;font-size:12.5px}
   .src label{color:var(--muted);font-family:"JetBrains Mono",monospace}
   .src input{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:7px 10px;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:12px}
-  .src button{background:var(--both);color:#03121f;border:0;padding:7px 14px;border-radius:6px;font-weight:600;cursor:pointer}
+  .src button{background:var(--accent);color:#03121f;border:0;padding:7px 14px;border-radius:6px;font-weight:600;cursor:pointer}
   .banner{margin:10px 0;padding:9px 12px;border-radius:6px;font-size:12.5px;display:none}
   .banner.show{display:block}
   .banner.sample{background:#2a2310;border:1px solid #4a3c12;color:#e8c878}
   .banner.err{background:#2a1414;border:1px solid #4a1f1f;color:#f0a0a0}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 6px}
   select,.bar input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:6px;font-size:13px}
-  .tab{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
-  .tab.on{background:var(--hot);border-color:var(--both);color:var(--txt)}
-  .chip{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:20px;font-size:12px;cursor:pointer}
-  .chip.on{background:var(--hot);border-color:var(--both);color:var(--txt)}
+  .bar input[type=text]{min-width:200px}
   .count{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
   table{width:100%;border-collapse:collapse;margin-top:4px}
   thead th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
   th.num,td.num{text-align:right;font-family:"JetBrains Mono",monospace}
-  tbody td{padding:8px 10px;border-bottom:1px solid #1a222b;font-size:13.5px}
+  tbody td{padding:9px 10px;border-bottom:1px solid #1a222b;font-size:14px}
   tbody tr:hover{background:var(--panel)}
-  tr.hot td:first-child{box-shadow:inset 3px 0 0 var(--both)}
-  .title{font-weight:600}.artist{color:var(--muted);font-size:12.5px}
+  td.rank{font-family:"JetBrains Mono",monospace;color:var(--muted);font-weight:600;width:48px;text-align:right}
+  td.rank.top{color:var(--accent)}
+  .title{font-weight:600}.artist{color:var(--muted);font-size:13px}
   .genre{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);background:var(--panel2);padding:2px 7px;border-radius:4px;white-space:nowrap}
-  .mv{font-family:"JetBrains Mono",monospace;font-weight:600}
+  .mv{font-family:"JetBrains Mono",monospace;font-weight:600;font-size:12.5px}
   .mv.up{color:var(--up)}.mv.down{color:var(--down)}.mv.flat{color:var(--flat)}
-  .d7{font-family:"JetBrains Mono",monospace;font-size:12.5px}.d7.pos{color:var(--up)}.d7.neg{color:var(--down)}
-  .badge{font-size:10px;letter-spacing:.04em;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap}
-  .b-new{background:#11240f;color:var(--up);border:1px solid #1f3d1c}
-  .b-both{background:#0e2942;color:var(--both);border:1px solid #1d3f5e}
+  .mv.new{color:var(--up)}
+  .st{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted)}
   .dash{color:var(--dim)}
-  details{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:var(--panel)}
-  summary{cursor:pointer;padding:10px 12px;font-weight:600;font-family:"Space Grotesk",sans-serif;display:flex;align-items:center;gap:8px}
-  summary .gc{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);font-weight:400}
-  details .glist{padding:4px 12px 12px}
-  .grow{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #1a222b;font-size:13.5px}
-  .grow .r{font-family:"JetBrains Mono",monospace;color:var(--dim);width:26px;text-align:right;flex:none}
-  .grow .gt{font-weight:600}.grow .ga{color:var(--muted)}
   footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.6}
 </style>
 </head>
 <body>
 <header>
-  <h1>Trend Monitor <span class="tag">playmusic · apple + spotify</span></h1>
+  <h1>Trend Monitor</h1>
   <div class="stamp" id="stamp">—</div>
 </header>
 
 <div class="src">
   <label>data url</label>
-  <input id="url" placeholder="auto-loads trend_latest.json when hosted; paste a URL to override">
+  <input id="url" placeholder="auto-loads when hosted; paste a URL to override">
   <button id="load">Load</button>
 </div>
-<div class="banner sample show" id="banner">Built-in sample data. When hosted on GitHub Pages next to trend_latest.json, live data loads automatically.</div>
+<div class="banner sample show" id="banner">Built-in sample. Live data loads automatically when hosted on GitHub Pages.</div>
 
 <div class="bar">
-  <select id="cc"></select>
-  <span class="tab on" id="t-trend" data-v="trending">Trending</span>
-  <span class="tab" id="t-genre" data-v="genre">By genre</span>
+  <select id="region"></select>
+  <select id="genre"></select>
   <input type="text" id="q" placeholder="Search artist or title…">
   <span class="count" id="count"></span>
 </div>
 
-<div class="bar" id="trendfilters">
-  <span class="chip" id="f-new">New / re-entries</span>
-  <span class="chip" id="f-both">On Apple too</span>
-</div>
+<table>
+  <thead><tr><th class="num">#</th><th>Track</th><th>Genre</th><th class="num">Move</th><th class="num">Streams</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
 
-<div id="view"></div>
-
-<footer>
-  Trending = Spotify daily chart (via Kworb) ranked by momentum: new entries and biggest climbers first, then 7-day stream growth; cross-checked against Apple's chart.
-  Genre lists = Apple top songs per genre (per country storefront). All sources free, no login. Refreshes on each scheduled pull.
-</footer>
+<footer id="foot"></footer>
 
 <script>
-const SAMPLE = {"generated_at":"2026-06-17T21:21:39.744322+00:00","countries":["us","gb"],"genres":["Pop","Hip-Hop/Rap","Country","R&B/Soul","Dance","Electronic","Rock","Alternative","Latin","Reggae"],"source_note":"sample","data":{"us":{"trending":[{"spotify_rank":40,"pos_change":"NEW","d7":900000,"artist":"sombr","title":"undressed","on_both":false,"apple_rank":null,"genre":"","is_new":true,"score":30.0},{"spotify_rank":22,"pos_change":"RE","d7":1200000,"artist":"Leon Thomas","title":"MUTT","on_both":false,"apple_rank":null,"genre":"","is_new":true,"score":30.0},{"spotify_rank":12,"pos_change":"+8","d7":1800000,"artist":"Alex Warren","title":"Bloodline","on_both":true,"apple_rank":18,"genre":"Pop","is_new":false,"score":11.6},{"spotify_rank":9,"pos_change":"+2","d7":450000,"artist":"Ella Langley & Morgan Wallen","title":"I Can't Love You Anymore","on_both":true,"apple_rank":7,"genre":"Country","is_new":false,"score":10.4},{"spotify_rank":1,"pos_change":"=","d7":6971017,"artist":"Olivia Rodrigo","title":"stupid song","on_both":true,"apple_rank":2,"genre":"Pop","is_new":false,"score":10.0},{"spotify_rank":3,"pos_change":"+1","d7":-318028,"artist":"Ariana Grande","title":"hate that i made you love me","on_both":true,"apple_rank":6,"genre":"Pop","is_new":false,"score":5.2},{"spotify_rank":5,"pos_change":"-3","d7":-200000,"artist":"Drake","title":"Janice STFU","on_both":true,"apple_rank":1,"genre":"Hip-Hop/Rap","is_new":false,"score":4.7}],"genres":{"Pop":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop"},{"rank":2,"title":"Pop song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Pop song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Pop song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Pop song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Pop song 6","artist":"Artist 6","genre":""}],"Hip-Hop/Rap":[{"rank":1,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap"},{"rank":2,"title":"Hip-Hop/Rap song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Hip-Hop/Rap song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Hip-Hop/Rap song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Hip-Hop/Rap song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Hip-Hop/Rap song 6","artist":"Artist 6","genre":""}],"Country":[{"rank":1,"title":"Choosin' Texas","artist":"Ella Langley","genre":"Country"},{"rank":2,"title":"Country song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Country song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Country song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Country song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Country song 6","artist":"Artist 6","genre":""}],"R&B/Soul":[{"rank":1,"title":"R&B/Soul song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"R&B/Soul song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"R&B/Soul song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"R&B/Soul song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"R&B/Soul song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"R&B/Soul song 6","artist":"Artist 6","genre":""}],"Dance":[{"rank":1,"title":"Dance song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Dance song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Dance song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Dance song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Dance song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Dance song 6","artist":"Artist 6","genre":""}],"Electronic":[{"rank":1,"title":"Electronic song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Electronic song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Electronic song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Electronic song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Electronic song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Electronic song 6","artist":"Artist 6","genre":""}],"Rock":[{"rank":1,"title":"Rock song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Rock song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Rock song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Rock song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Rock song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Rock song 6","artist":"Artist 6","genre":""}],"Alternative":[{"rank":1,"title":"Alternative song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Alternative song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Alternative song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Alternative song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Alternative song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Alternative song 6","artist":"Artist 6","genre":""}],"Latin":[{"rank":1,"title":"Latin song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Latin song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Latin song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Latin song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Latin song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Latin song 6","artist":"Artist 6","genre":""}],"Reggae":[{"rank":1,"title":"Reggae song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Reggae song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Reggae song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Reggae song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Reggae song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Reggae song 6","artist":"Artist 6","genre":""}]}},"gb":{"trending":[{"spotify_rank":18,"pos_change":"NEW","d7":700000,"artist":"Central Cee","title":"GBP","on_both":false,"apple_rank":null,"genre":"","is_new":true,"score":30.0},{"spotify_rank":7,"pos_change":"+5","d7":900000,"artist":"Myles Smith","title":"Stargazing","on_both":true,"apple_rank":9,"genre":"Pop","is_new":false,"score":11.0},{"spotify_rank":1,"pos_change":"=","d7":5500000,"artist":"Olivia Rodrigo","title":"stupid song","on_both":true,"apple_rank":3,"genre":"Pop","is_new":false,"score":10.0}],"genres":{"Pop":[{"rank":1,"title":"Pop song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Pop song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Pop song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Pop song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Pop song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Pop song 6","artist":"Artist 6","genre":""}],"Hip-Hop/Rap":[{"rank":1,"title":"Hip-Hop/Rap song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Hip-Hop/Rap song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Hip-Hop/Rap song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Hip-Hop/Rap song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Hip-Hop/Rap song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Hip-Hop/Rap song 6","artist":"Artist 6","genre":""}],"Country":[{"rank":1,"title":"Country song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Country song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Country song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Country song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Country song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Country song 6","artist":"Artist 6","genre":""}],"R&B/Soul":[{"rank":1,"title":"R&B/Soul song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"R&B/Soul song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"R&B/Soul song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"R&B/Soul song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"R&B/Soul song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"R&B/Soul song 6","artist":"Artist 6","genre":""}],"Dance":[{"rank":1,"title":"Dance song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Dance song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Dance song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Dance song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Dance song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Dance song 6","artist":"Artist 6","genre":""}],"Electronic":[{"rank":1,"title":"Electronic song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Electronic song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Electronic song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Electronic song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Electronic song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Electronic song 6","artist":"Artist 6","genre":""}],"Rock":[{"rank":1,"title":"Rock song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Rock song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Rock song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Rock song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Rock song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Rock song 6","artist":"Artist 6","genre":""}],"Alternative":[{"rank":1,"title":"Alternative song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Alternative song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Alternative song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Alternative song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Alternative song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Alternative song 6","artist":"Artist 6","genre":""}],"Latin":[{"rank":1,"title":"Latin song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Latin song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Latin song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Latin song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Latin song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Latin song 6","artist":"Artist 6","genre":""}],"Reggae":[{"rank":1,"title":"Reggae song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Reggae song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Reggae song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Reggae song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Reggae song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Reggae song 6","artist":"Artist 6","genre":""}]}}}};
+const SAMPLE = {"generated_at":"2026-06-17T21:39:54.559945+00:00","regions":["us","europe","global"],"region_labels":{"us":"US","europe":"Europe","global":"Global"},"genres":["Alternative","Country","Dance","Hip-Hop/Rap","K-Pop","Latin","Pop","R&B/Soul"],"data":{"us":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":6971017,"d7":null},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"+1","streams":6026356,"d7":null},{"rank":3,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"-1","streams":5499414,"d7":null},{"rank":4,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"+5","streams":5100000,"d7":null},{"rank":5,"title":"I Can't Love You Anymore","artist":"Ella Langley & Morgan Wallen","genre":"Country","move":"=","streams":4800000,"d7":null},{"rank":6,"title":"Bloodline","artist":"Alex Warren","genre":"Pop","move":"+2","streams":4200000,"d7":null},{"rank":7,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"-2","streams":4000000,"d7":null},{"rank":8,"title":"MUTT","artist":"Leon Thomas","genre":"R&B/Soul","move":"+3","streams":3700000,"d7":null},{"rank":9,"title":"back to friends","artist":"sombr","genre":"Alternative","move":"=","streams":3500000,"d7":null},{"rank":10,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap","move":"NEW","streams":3300000,"d7":null},{"rank":50,"title":"Espresso","artist":"Sabrina Carpenter","genre":"Pop","move":"-3","streams":1200000,"d7":null},{"rank":144,"title":"Deep Cut","artist":"Some Artist","genre":"Dance","move":"-1","streams":450000,"d7":null}],"europe":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2100000,"d7":null},{"rank":2,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":1900000,"d7":null},{"rank":3,"title":"Stargazing","artist":"Myles Smith","genre":"Pop","move":"","streams":1500000,"d7":null},{"rank":4,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"","streams":1200000,"d7":null}],"global":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000,"d7":null},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":8500000,"d7":null},{"rank":3,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"-1","streams":8000000,"d7":null},{"rank":4,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"+4","streams":6000000,"d7":null},{"rank":5,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"=","streams":5800000,"d7":null}]}};
 const $ = s=>document.querySelector(s);
-let P=null, state={cc:null, view:'trending', q:'', newOnly:false, bothOnly:false};
+let P=null, state={region:null, genre:"", q:""};
 
-function fmt(n){ if(n==null) return "—"; const s=n<0?"-":"+"; return s+Math.abs(Math.round(n)).toLocaleString(); }
-function move(pc){
-  if(pc==null||pc==="") return '<span class="mv flat">·</span>';
-  if(pc==="NEW"||pc==="RE") return '<span class="badge b-new">'+pc+'</span>';
-  if(pc==="=") return '<span class="mv flat">=</span>';
-  if(String(pc).startsWith("+")) return '<span class="mv up">▲'+String(pc).slice(1)+'</span>';
-  if(String(pc).startsWith("-")) return '<span class="mv down">▼'+String(pc).slice(1)+'</span>';
-  return '<span class="mv flat">'+pc+'</span>';
-}
-function signal(r){
-  const b=[];
-  if(r.is_new) b.push('<span class="badge b-new">NEW</span>');
-  if(r.on_both) b.push('<span class="badge b-both">ON APPLE</span>');
-  return b.join(" ") || '<span class="dash">—</span>';
+function fnum(n){ return n==null?"—":Number(n).toLocaleString(); }
+function move(m){
+  if(!m||m==="") return '<span class="mv flat">—</span>';
+  if(m==="NEW"||m==="RE") return '<span class="mv new">'+m+'</span>';
+  if(m==="=") return '<span class="mv flat">=</span>';
+  if(m.startsWith("+")) return '<span class="mv up">▲'+m.slice(1)+'</span>';
+  if(m.startsWith("-")) return '<span class="mv down">▼'+m.slice(1)+'</span>';
+  return '<span class="mv flat">'+m+'</span>';
 }
 
-function renderTrending(){
-  $("#trendfilters").style.display="flex";
-  const cc=state.cc, q=state.q.toLowerCase();
-  let rows=(P.data[cc]?.trending)||[];
-  rows=rows.filter(r=>{
-    if(state.newOnly && !r.is_new) return false;
-    if(state.bothOnly && !r.on_both) return false;
+function render(){
+  const rows0 = (P.data[state.region]||[]);
+  const q = state.q.toLowerCase();
+  const rows = rows0.filter(r=>{
+    if(state.genre && r.genre!==state.genre) return false;
     if(q && !((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q)) return false;
     return true;
   });
-  $("#count").textContent=rows.length+" tracks";
-  $("#view").innerHTML=`<table><thead><tr>
-    <th class="num">Spotify</th><th>Track</th><th>Genre</th><th class="num">Apple</th>
-    <th class="num">Move</th><th class="num">7-day Δ</th><th>Signal</th></tr></thead>
-    <tbody>`+rows.map(r=>`<tr class="${r.is_new||(r.on_both&&String(r.pos_change).startsWith('+'))?'hot':''}">
-      <td class="num">${r.spotify_rank??'—'}</td>
-      <td><div class="title">${r.title||'—'}</div><div class="artist">${r.artist||'—'}</div></td>
-      <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
-      <td class="num">${r.apple_rank??'<span class="dash">—</span>'}</td>
-      <td class="num">${move(r.pos_change)}</td>
-      <td class="num"><span class="d7 ${(r.d7??0)>=0?'pos':'neg'}">${fmt(r.d7)}</span></td>
-      <td>${signal(r)}</td></tr>`).join("")+`</tbody></table>`;
+  $("#rows").innerHTML = rows.map(r=>`<tr>
+    <td class="rank ${r.rank<=10?'top':''}">${r.rank}</td>
+    <td><div class="title">${r.title||'—'}</div><div class="artist">${r.artist||'—'}</div></td>
+    <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
+    <td class="num">${move(r.move)}</td>
+    <td class="num"><span class="st">${fnum(r.streams)}</span></td>
+  </tr>`).join("");
+  $("#count").textContent = rows.length+" of "+rows0.length;
 }
-
-function renderGenre(){
-  $("#trendfilters").style.display="none";
-  const cc=state.cc, q=state.q.toLowerCase();
-  const genres=P.data[cc]?.genres||{};
-  const names=(P.genres||Object.keys(genres)).filter(g=>genres[g]&&genres[g].length);
-  if(!names.length){ $("#view").innerHTML='<p class="dash" style="padding:14px">No genre lists for this market (genre charts are per Apple storefront — try US, GB, CA, or AU).</p>'; $("#count").textContent=""; return; }
-  let shown=0;
-  $("#view").innerHTML=names.map((g,idx)=>{
-    let list=genres[g].filter(r=>!q||((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q));
-    shown+=list.length;
-    const body=list.map(r=>`<div class="grow"><span class="r">${r.rank}</span>
-      <span><span class="gt">${r.title}</span> <span class="ga">— ${r.artist}</span></span></div>`).join("")
-      || '<div class="grow"><span class="ga">no matches</span></div>';
-    return `<details ${idx<2||q?'open':''}><summary>${g} <span class="gc">${list.length} songs</span></summary><div class="glist">${body}</div></details>`;
-  }).join("");
-  $("#count").textContent=shown+" songs · "+names.length+" genres";
-}
-
-function render(){ state.view==='trending'?renderTrending():renderGenre(); }
 
 function buildControls(){
-  $("#cc").innerHTML=(P.countries||[]).map(c=>`<option value="${c}">${c.toUpperCase()}</option>`).join("");
-  $("#cc").value=state.cc;
+  $("#region").innerHTML = (P.regions||[]).map(r=>`<option value="${r}">${(P.region_labels&&P.region_labels[r])||r.toUpperCase()}</option>`).join("");
+  $("#region").value = state.region;
+  $("#genre").innerHTML = '<option value="">All genres</option>'+(P.genres||[]).map(g=>`<option value="${g}">${g}</option>`).join("");
+  $("#genre").value = state.genre;
 }
+
 function setData(p,isSample){
-  P=p; state.cc=(p.countries&&p.countries[0])||"us";
-  $("#stamp").textContent=isSample?"sample data":
-    "updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
+  P=p; state.region=(p.regions&&p.regions[0])||"global"; state.genre=""; 
+  $("#stamp").textContent = isSample?"sample data":"updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
+  $("#foot").textContent = isSample
+    ? "Sample preview. Live data is the current Spotify Top 200 by region, in rank order. Europe is an aggregate of major EU markets."
+    : "Current Spotify Top 200 by region, listed in true rank order (1 = most popular). Europe aggregates major EU markets. Genre filters the same ranked chart. Updates each scheduled pull.";
   buildControls(); render();
 }
+
 async function load(url,silent){
   const b=$("#banner");
   try{
@@ -172,18 +128,15 @@ async function load(url,silent){
     setData(await res.json(),false); b.className="banner"; b.textContent="";
   }catch(e){
     if(!silent){ b.className="banner err show";
-      b.textContent="Could not load ("+e.message+"). Open this page on GitHub Pages or as a downloaded file (the chat preview blocks outside data). Showing sample."; }
+      b.textContent="Could not load ("+e.message+"). Open on GitHub Pages or as a downloaded file. Showing sample."; }
     setData(SAMPLE,true);
   }
 }
-$("#cc").onchange=e=>{state.cc=e.target.value;render();};
+
+$("#region").onchange=e=>{state.region=e.target.value;render();};
+$("#genre").onchange=e=>{state.genre=e.target.value;render();};
 $("#q").oninput=e=>{state.q=e.target.value;render();};
 $("#load").onclick=()=>{const u=$("#url").value.trim();if(u)load(u);};
-[["#t-trend","trending"],["#t-genre","genre"]].forEach(([id,v])=>{
-  $(id).onclick=()=>{state.view=v;$("#t-trend").classList.toggle("on",v==='trending');$("#t-genre").classList.toggle("on",v==='genre');render();};
-});
-function chip(id,key){const el=$(id);el.onclick=()=>{state[key]=!state[key];el.classList.toggle("on",state[key]);render();};}
-chip("#f-new","newOnly"); chip("#f-both","bothOnly");
 
 setData(SAMPLE,true);
 load('trend_latest.json',true);
