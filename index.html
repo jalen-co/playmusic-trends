@@ -8,64 +8,53 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0c1014; --panel:#13191f; --panel2:#171f27; --line:#222c36;
-    --txt:#e6edf3; --muted:#8a97a6; --dim:#5b6675;
-    --up:#3fb950; --down:#e0883a; --flat:#5b6675; --both:#4aa3ff;
-    --hot:#1c2733;
-  }
+  :root{--bg:#0c1014;--panel:#13191f;--panel2:#171f27;--line:#222c36;--txt:#e6edf3;
+    --muted:#8a97a6;--dim:#5b6675;--up:#3fb950;--down:#e0883a;--flat:#5b6675;--both:#4aa3ff;--hot:#1c2733}
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif}
-  body{padding:22px;max-width:1180px;margin:0 auto}
-  a{color:var(--both);text-decoration:none}
-
-  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);padding-bottom:14px}
+  body{padding:20px;max-width:1180px;margin:0 auto}
+  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
   h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.02em;margin:0}
   h1 .tag{color:var(--dim);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-left:4px}
   .stamp{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);margin-left:auto}
-
-  .src{display:flex;gap:8px;align-items:center;margin:14px 0 6px;font-size:12.5px}
-  .src label{color:var(--muted);font-family:"JetBrains Mono",monospace;white-space:nowrap}
-  .src input{flex:1;min-width:220px;background:var(--panel);border:1px solid var(--line);color:var(--txt);
-    padding:7px 10px;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:12px}
-  .src button{background:var(--both);color:#03121f;border:0;padding:7px 14px;border-radius:6px;font-weight:600;cursor:pointer;font-size:12.5px}
-  .src button:hover{filter:brightness(1.08)}
-
+  .src{display:flex;gap:8px;align-items:center;margin:12px 0 4px;font-size:12.5px}
+  .src label{color:var(--muted);font-family:"JetBrains Mono",monospace}
+  .src input{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:7px 10px;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .src button{background:var(--both);color:#03121f;border:0;padding:7px 14px;border-radius:6px;font-weight:600;cursor:pointer}
   .banner{margin:10px 0;padding:9px 12px;border-radius:6px;font-size:12.5px;display:none}
   .banner.show{display:block}
   .banner.sample{background:#2a2310;border:1px solid #4a3c12;color:#e8c878}
   .banner.err{background:#2a1414;border:1px solid #4a1f1f;color:#f0a0a0}
-
-  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 10px}
-  .controls input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);
-    padding:8px 11px;border-radius:6px;font-size:13px;min-width:200px}
-  .chip{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:20px;
-    font-size:12px;cursor:pointer;user-select:none}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 6px}
+  select,.bar input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:6px;font-size:13px}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
+  .tab.on{background:var(--hot);border-color:var(--both);color:var(--txt)}
+  .chip{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:20px;font-size:12px;cursor:pointer}
   .chip.on{background:var(--hot);border-color:var(--both);color:var(--txt)}
   .count{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
-
-  table{width:100%;border-collapse:collapse;margin-top:6px}
-  thead th{position:sticky;top:0;background:var(--bg);text-align:left;font-size:11px;letter-spacing:.05em;
-    text-transform:uppercase;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
-  thead th.num,td.num{text-align:right;font-family:"JetBrains Mono",monospace}
-  tbody td{padding:9px 10px;border-bottom:1px solid #1a222b;font-size:13.5px;vertical-align:middle}
+  table{width:100%;border-collapse:collapse;margin-top:4px}
+  thead th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th.num,td.num{text-align:right;font-family:"JetBrains Mono",monospace}
+  tbody td{padding:8px 10px;border-bottom:1px solid #1a222b;font-size:13.5px}
   tbody tr:hover{background:var(--panel)}
   tr.hot td:first-child{box-shadow:inset 3px 0 0 var(--both)}
-
-  .title{font-weight:600}
-  .artist{color:var(--muted);font-size:12.5px}
-  .genre{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);background:var(--panel2);
-    padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .title{font-weight:600}.artist{color:var(--muted);font-size:12.5px}
+  .genre{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);background:var(--panel2);padding:2px 7px;border-radius:4px;white-space:nowrap}
   .mv{font-family:"JetBrains Mono",monospace;font-weight:600}
-  .mv.up{color:var(--up)} .mv.down{color:var(--down)} .mv.flat{color:var(--flat)}
-  .d7{font-family:"JetBrains Mono",monospace;font-size:12.5px}
-  .d7.pos{color:var(--up)} .d7.neg{color:var(--down)}
-  .badge{font-size:10px;letter-spacing:.04em;font-weight:600;padding:2px 7px;border-radius:4px}
+  .mv.up{color:var(--up)}.mv.down{color:var(--down)}.mv.flat{color:var(--flat)}
+  .d7{font-family:"JetBrains Mono",monospace;font-size:12.5px}.d7.pos{color:var(--up)}.d7.neg{color:var(--down)}
+  .badge{font-size:10px;letter-spacing:.04em;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .b-new{background:#11240f;color:var(--up);border:1px solid #1f3d1c}
   .b-both{background:#0e2942;color:var(--both);border:1px solid #1d3f5e}
-  .b-add{background:#11240f;color:var(--up);border:1px solid #1f3d1c}
   .dash{color:var(--dim)}
+  details{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:var(--panel)}
+  summary{cursor:pointer;padding:10px 12px;font-weight:600;font-family:"Space Grotesk",sans-serif;display:flex;align-items:center;gap:8px}
+  summary .gc{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);font-weight:400}
+  details .glist{padding:4px 12px 12px}
+  .grow{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #1a222b;font-size:13.5px}
+  .grow .r{font-family:"JetBrains Mono",monospace;color:var(--dim);width:26px;text-align:right;flex:none}
+  .grow .gt{font-weight:600}.grow .ga{color:var(--muted)}
   footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.6}
-  footer code{font-family:"JetBrains Mono",monospace;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -76,117 +65,128 @@
 
 <div class="src">
   <label>data url</label>
-  <input id="url" placeholder="https://raw.githubusercontent.com/USER/REPO/main/trend_latest.json">
+  <input id="url" placeholder="auto-loads trend_latest.json when hosted; paste a URL to override">
   <button id="load">Load</button>
 </div>
-<div class="banner sample show" id="banner">Showing built-in sample data. Paste your committed <code>trend_latest.json</code> raw URL above and press Load for live numbers.</div>
+<div class="banner sample show" id="banner">Built-in sample data. When hosted on GitHub Pages next to trend_latest.json, live data loads automatically.</div>
 
-<div class="controls">
+<div class="bar">
+  <select id="cc"></select>
+  <span class="tab on" id="t-trend" data-v="trending">Trending</span>
+  <span class="tab" id="t-genre" data-v="genre">By genre</span>
   <input type="text" id="q" placeholder="Search artist or title…">
-  <span class="chip" id="f-rising" data-on="0">Rising only</span>
-  <span class="chip" id="f-both" data-on="0">Cross-platform only</span>
-  <span class="chip" id="f-genre" data-on="0" id-genre="" style="display:none"></span>
   <span class="count" id="count"></span>
 </div>
 
-<table>
-  <thead><tr>
-    <th>Track</th><th>Genre</th><th class="num">Apple</th><th class="num">Spotify</th>
-    <th class="num">Move</th><th class="num">7-day Δ</th><th>Signal</th>
-  </tr></thead>
-  <tbody id="rows"></tbody>
-</table>
+<div class="bar" id="trendfilters">
+  <span class="chip" id="f-new">New / re-entries</span>
+  <span class="chip" id="f-both">On Apple too</span>
+</div>
+
+<div id="view"></div>
 
 <footer>
-  Sources: Apple Music RSS (most-played, daily) + Kworb (Spotify daily chart, daily). Both free, no auth.
-  Freshness = last scheduled pull. <strong>Cross-platform + rising</strong> is the strongest surface-it signal;
-  <strong>Spotify-only risers</strong> are add candidates not yet on Apple.
-  Kworb is scraped third-party data — confirm its terms before any commercial build.
+  Trending = Spotify daily chart (via Kworb) ranked by momentum: new entries and biggest climbers first, then 7-day stream growth; cross-checked against Apple's chart.
+  Genre lists = Apple top songs per genre (per country storefront). All sources free, no login. Refreshes on each scheduled pull.
 </footer>
 
 <script>
-const SAMPLE = [{"key": "olivia rodrigo stupid song", "artist": "Olivia Rodrigo", "title": "stupid song", "genre": "Pop", "apple_rank": 2.0, "apple_url": "", "spotify_rank": 1.0, "spotify_pos_change": "=", "spotify_streams_delta": 481232.0, "spotify_7day_delta": 6971017.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "olivia rodrigo the cure", "artist": "Olivia Rodrigo", "title": "the cure", "genre": "Pop", "apple_rank": 5.0, "apple_url": "", "spotify_rank": 2.0, "spotify_pos_change": "=", "spotify_streams_delta": 374425.0, "spotify_7day_delta": 2119867.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "ariana grande hate that i made you love me", "artist": "Ariana Grande", "title": "hate that i made you love me", "genre": "Pop", "apple_rank": 6.0, "apple_url": "", "spotify_rank": 3.0, "spotify_pos_change": "+1", "spotify_streams_delta": 676214.0, "spotify_7day_delta": -318028.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "ella langley morgan wallen i can t love you anymore", "artist": "Ella Langley & Morgan Wallen", "title": "I Can't Love You Anymore", "genre": "Country", "apple_rank": 7.0, "apple_url": "", "spotify_rank": 9.0, "spotify_pos_change": "+2", "spotify_streams_delta": 90000.0, "spotify_7day_delta": 450000.0, "on_both": true, "rising": true, "surface_priority": 3}, {"key": "olivia rodrigo drop dead", "artist": "Olivia Rodrigo", "title": "drop dead", "genre": NaN, "apple_rank": NaN, "apple_url": NaN, "spotify_rank": 4.0, "spotify_pos_change": "-1", "spotify_streams_delta": 222727.0, "spotify_7day_delta": 2307618.0, "on_both": false, "rising": true, "surface_priority": 1}, {"key": "michael jackson billie jean", "artist": "Michael Jackson", "title": "Billie Jean", "genre": NaN, "apple_rank": NaN, "apple_url": NaN, "spotify_rank": 5.0, "spotify_pos_change": "=", "spotify_streams_delta": -17688.0, "spotify_7day_delta": 30493.0, "on_both": false, "rising": true, "surface_priority": 1}, {"key": "sombr back to friends", "artist": "Sombr", "title": "back to friends", "genre": NaN, "apple_rank": NaN, "apple_url": NaN, "spotify_rank": 12.0, "spotify_pos_change": "+4", "spotify_streams_delta": 310000.0, "spotify_7day_delta": 1800000.0, "on_both": false, "rising": true, "surface_priority": 1}, {"key": "drake janice stfu", "artist": "Drake", "title": "Janice STFU", "genre": "Hip-Hop/Rap", "apple_rank": 1.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}, {"key": "drake shabang", "artist": "Drake", "title": "Shabang", "genre": "Hip-Hop/Rap", "apple_rank": 3.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}, {"key": "ella langley choosin texas", "artist": "Ella Langley", "title": "Choosin' Texas", "genre": "Country", "apple_rank": 4.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}, {"key": "taylor swift i knew it i knew you", "artist": "Taylor Swift", "title": "I Knew It, I Knew You", "genre": "Country", "apple_rank": 8.0, "apple_url": "", "spotify_rank": NaN, "spotify_pos_change": NaN, "spotify_streams_delta": NaN, "spotify_7day_delta": NaN, "on_both": false, "rising": false, "surface_priority": 0}];
-const $ = s => document.querySelector(s);
-let DATA = [], state = {q:"", rising:false, both:false};
+const SAMPLE = {"generated_at":"2026-06-17T21:21:39.744322+00:00","countries":["us","gb"],"genres":["Pop","Hip-Hop/Rap","Country","R&B/Soul","Dance","Electronic","Rock","Alternative","Latin","Reggae"],"source_note":"sample","data":{"us":{"trending":[{"spotify_rank":40,"pos_change":"NEW","d7":900000,"artist":"sombr","title":"undressed","on_both":false,"apple_rank":null,"genre":"","is_new":true,"score":30.0},{"spotify_rank":22,"pos_change":"RE","d7":1200000,"artist":"Leon Thomas","title":"MUTT","on_both":false,"apple_rank":null,"genre":"","is_new":true,"score":30.0},{"spotify_rank":12,"pos_change":"+8","d7":1800000,"artist":"Alex Warren","title":"Bloodline","on_both":true,"apple_rank":18,"genre":"Pop","is_new":false,"score":11.6},{"spotify_rank":9,"pos_change":"+2","d7":450000,"artist":"Ella Langley & Morgan Wallen","title":"I Can't Love You Anymore","on_both":true,"apple_rank":7,"genre":"Country","is_new":false,"score":10.4},{"spotify_rank":1,"pos_change":"=","d7":6971017,"artist":"Olivia Rodrigo","title":"stupid song","on_both":true,"apple_rank":2,"genre":"Pop","is_new":false,"score":10.0},{"spotify_rank":3,"pos_change":"+1","d7":-318028,"artist":"Ariana Grande","title":"hate that i made you love me","on_both":true,"apple_rank":6,"genre":"Pop","is_new":false,"score":5.2},{"spotify_rank":5,"pos_change":"-3","d7":-200000,"artist":"Drake","title":"Janice STFU","on_both":true,"apple_rank":1,"genre":"Hip-Hop/Rap","is_new":false,"score":4.7}],"genres":{"Pop":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop"},{"rank":2,"title":"Pop song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Pop song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Pop song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Pop song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Pop song 6","artist":"Artist 6","genre":""}],"Hip-Hop/Rap":[{"rank":1,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap"},{"rank":2,"title":"Hip-Hop/Rap song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Hip-Hop/Rap song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Hip-Hop/Rap song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Hip-Hop/Rap song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Hip-Hop/Rap song 6","artist":"Artist 6","genre":""}],"Country":[{"rank":1,"title":"Choosin' Texas","artist":"Ella Langley","genre":"Country"},{"rank":2,"title":"Country song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Country song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Country song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Country song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Country song 6","artist":"Artist 6","genre":""}],"R&B/Soul":[{"rank":1,"title":"R&B/Soul song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"R&B/Soul song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"R&B/Soul song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"R&B/Soul song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"R&B/Soul song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"R&B/Soul song 6","artist":"Artist 6","genre":""}],"Dance":[{"rank":1,"title":"Dance song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Dance song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Dance song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Dance song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Dance song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Dance song 6","artist":"Artist 6","genre":""}],"Electronic":[{"rank":1,"title":"Electronic song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Electronic song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Electronic song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Electronic song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Electronic song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Electronic song 6","artist":"Artist 6","genre":""}],"Rock":[{"rank":1,"title":"Rock song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Rock song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Rock song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Rock song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Rock song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Rock song 6","artist":"Artist 6","genre":""}],"Alternative":[{"rank":1,"title":"Alternative song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Alternative song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Alternative song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Alternative song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Alternative song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Alternative song 6","artist":"Artist 6","genre":""}],"Latin":[{"rank":1,"title":"Latin song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Latin song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Latin song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Latin song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Latin song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Latin song 6","artist":"Artist 6","genre":""}],"Reggae":[{"rank":1,"title":"Reggae song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Reggae song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Reggae song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Reggae song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Reggae song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Reggae song 6","artist":"Artist 6","genre":""}]}},"gb":{"trending":[{"spotify_rank":18,"pos_change":"NEW","d7":700000,"artist":"Central Cee","title":"GBP","on_both":false,"apple_rank":null,"genre":"","is_new":true,"score":30.0},{"spotify_rank":7,"pos_change":"+5","d7":900000,"artist":"Myles Smith","title":"Stargazing","on_both":true,"apple_rank":9,"genre":"Pop","is_new":false,"score":11.0},{"spotify_rank":1,"pos_change":"=","d7":5500000,"artist":"Olivia Rodrigo","title":"stupid song","on_both":true,"apple_rank":3,"genre":"Pop","is_new":false,"score":10.0}],"genres":{"Pop":[{"rank":1,"title":"Pop song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Pop song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Pop song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Pop song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Pop song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Pop song 6","artist":"Artist 6","genre":""}],"Hip-Hop/Rap":[{"rank":1,"title":"Hip-Hop/Rap song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Hip-Hop/Rap song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Hip-Hop/Rap song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Hip-Hop/Rap song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Hip-Hop/Rap song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Hip-Hop/Rap song 6","artist":"Artist 6","genre":""}],"Country":[{"rank":1,"title":"Country song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Country song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Country song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Country song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Country song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Country song 6","artist":"Artist 6","genre":""}],"R&B/Soul":[{"rank":1,"title":"R&B/Soul song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"R&B/Soul song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"R&B/Soul song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"R&B/Soul song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"R&B/Soul song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"R&B/Soul song 6","artist":"Artist 6","genre":""}],"Dance":[{"rank":1,"title":"Dance song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Dance song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Dance song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Dance song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Dance song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Dance song 6","artist":"Artist 6","genre":""}],"Electronic":[{"rank":1,"title":"Electronic song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Electronic song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Electronic song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Electronic song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Electronic song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Electronic song 6","artist":"Artist 6","genre":""}],"Rock":[{"rank":1,"title":"Rock song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Rock song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Rock song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Rock song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Rock song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Rock song 6","artist":"Artist 6","genre":""}],"Alternative":[{"rank":1,"title":"Alternative song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Alternative song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Alternative song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Alternative song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Alternative song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Alternative song 6","artist":"Artist 6","genre":""}],"Latin":[{"rank":1,"title":"Latin song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Latin song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Latin song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Latin song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Latin song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Latin song 6","artist":"Artist 6","genre":""}],"Reggae":[{"rank":1,"title":"Reggae song 1","artist":"Artist 1","genre":""},{"rank":2,"title":"Reggae song 2","artist":"Artist 2","genre":""},{"rank":3,"title":"Reggae song 3","artist":"Artist 3","genre":""},{"rank":4,"title":"Reggae song 4","artist":"Artist 4","genre":""},{"rank":5,"title":"Reggae song 5","artist":"Artist 5","genre":""},{"rank":6,"title":"Reggae song 6","artist":"Artist 6","genre":""}]}}}};
+const $ = s=>document.querySelector(s);
+let P=null, state={cc:null, view:'trending', q:'', newOnly:false, bothOnly:false};
 
 function fmt(n){ if(n==null) return "—"; const s=n<0?"-":"+"; return s+Math.abs(Math.round(n)).toLocaleString(); }
-function rank(n){ return n==null ? '<span class="dash">—</span>' : Math.round(n); }
 function move(pc){
   if(pc==null||pc==="") return '<span class="mv flat">·</span>';
+  if(pc==="NEW"||pc==="RE") return '<span class="badge b-new">'+pc+'</span>';
   if(pc==="=") return '<span class="mv flat">=</span>';
   if(String(pc).startsWith("+")) return '<span class="mv up">▲'+String(pc).slice(1)+'</span>';
   if(String(pc).startsWith("-")) return '<span class="mv down">▼'+String(pc).slice(1)+'</span>';
   return '<span class="mv flat">'+pc+'</span>';
 }
 function signal(r){
-  if(r.on_both && r.rising) return '<span class="badge b-both">ON BOTH · RISING</span>';
-  if(r.on_both) return '<span class="badge b-both">ON BOTH</span>';
-  if(r.spotify_rank!=null && r.apple_rank==null) return '<span class="badge b-add">ADD CANDIDATE</span>';
-  return '<span class="dash">—</span>';
+  const b=[];
+  if(r.is_new) b.push('<span class="badge b-new">NEW</span>');
+  if(r.on_both) b.push('<span class="badge b-both">ON APPLE</span>');
+  return b.join(" ") || '<span class="dash">—</span>';
 }
 
-function render(){
-  const q = state.q.toLowerCase();
-  let rows = DATA.filter(r=>{
-    if(state.rising && !r.rising) return false;
-    if(state.both && !r.on_both) return false;
+function renderTrending(){
+  $("#trendfilters").style.display="flex";
+  const cc=state.cc, q=state.q.toLowerCase();
+  let rows=(P.data[cc]?.trending)||[];
+  rows=rows.filter(r=>{
+    if(state.newOnly && !r.is_new) return false;
+    if(state.bothOnly && !r.on_both) return false;
     if(q && !((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q)) return false;
     return true;
   });
-  rows.sort((a,b)=>(b.surface_priority||0)-(a.surface_priority||0)
-    || (a.apple_rank??999)-(b.apple_rank??999)
-    || (a.spotify_rank??999)-(b.spotify_rank??999));
-  $("#rows").innerHTML = rows.map(r=>{
-    const hot = r.on_both && r.rising ? "hot":"";
-    const d7 = r.spotify_7day_delta;
-    const d7cls = d7==null?"":(d7>=0?"pos":"neg");
-    return `<tr class="${hot}">
-      <td><div class="title">${r.title||"—"}</div><div class="artist">${r.artist||"—"}</div></td>
+  $("#count").textContent=rows.length+" tracks";
+  $("#view").innerHTML=`<table><thead><tr>
+    <th class="num">Spotify</th><th>Track</th><th>Genre</th><th class="num">Apple</th>
+    <th class="num">Move</th><th class="num">7-day Δ</th><th>Signal</th></tr></thead>
+    <tbody>`+rows.map(r=>`<tr class="${r.is_new||(r.on_both&&String(r.pos_change).startsWith('+'))?'hot':''}">
+      <td class="num">${r.spotify_rank??'—'}</td>
+      <td><div class="title">${r.title||'—'}</div><div class="artist">${r.artist||'—'}</div></td>
       <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
-      <td class="num">${rank(r.apple_rank)}</td>
-      <td class="num">${rank(r.spotify_rank)}</td>
-      <td class="num">${move(r.spotify_pos_change)}</td>
-      <td class="num"><span class="d7 ${d7cls}">${fmt(d7)}</span></td>
-      <td>${signal(r)}</td>
-    </tr>`;
+      <td class="num">${r.apple_rank??'<span class="dash">—</span>'}</td>
+      <td class="num">${move(r.pos_change)}</td>
+      <td class="num"><span class="d7 ${(r.d7??0)>=0?'pos':'neg'}">${fmt(r.d7)}</span></td>
+      <td>${signal(r)}</td></tr>`).join("")+`</tbody></table>`;
+}
+
+function renderGenre(){
+  $("#trendfilters").style.display="none";
+  const cc=state.cc, q=state.q.toLowerCase();
+  const genres=P.data[cc]?.genres||{};
+  const names=(P.genres||Object.keys(genres)).filter(g=>genres[g]&&genres[g].length);
+  if(!names.length){ $("#view").innerHTML='<p class="dash" style="padding:14px">No genre lists for this market (genre charts are per Apple storefront — try US, GB, CA, or AU).</p>'; $("#count").textContent=""; return; }
+  let shown=0;
+  $("#view").innerHTML=names.map((g,idx)=>{
+    let list=genres[g].filter(r=>!q||((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q));
+    shown+=list.length;
+    const body=list.map(r=>`<div class="grow"><span class="r">${r.rank}</span>
+      <span><span class="gt">${r.title}</span> <span class="ga">— ${r.artist}</span></span></div>`).join("")
+      || '<div class="grow"><span class="ga">no matches</span></div>';
+    return `<details ${idx<2||q?'open':''}><summary>${g} <span class="gc">${list.length} songs</span></summary><div class="glist">${body}</div></details>`;
   }).join("");
-  $("#count").textContent = rows.length+" / "+DATA.length+" tracks";
+  $("#count").textContent=shown+" songs · "+names.length+" genres";
 }
 
-function setData(payload, isSample){
-  DATA = payload.rows||[];
-  $("#stamp").textContent = isSample ? "sample data" :
-    "updated "+(payload.generated_at? new Date(payload.generated_at).toLocaleString():"?")+
-    "  ·  "+(payload.country||"").toUpperCase();
-  render();
-}
+function render(){ state.view==='trending'?renderTrending():renderGenre(); }
 
-async function load(url, silent){
+function buildControls(){
+  $("#cc").innerHTML=(P.countries||[]).map(c=>`<option value="${c}">${c.toUpperCase()}</option>`).join("");
+  $("#cc").value=state.cc;
+}
+function setData(p,isSample){
+  P=p; state.cc=(p.countries&&p.countries[0])||"us";
+  $("#stamp").textContent=isSample?"sample data":
+    "updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
+  buildControls(); render();
+}
+async function load(url,silent){
   const b=$("#banner");
   try{
-    const res = await fetch(url, {cache:"no-store"});
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const json = await res.json();
-    setData(json, false);
-    b.className="banner"; b.textContent="";
+    const res=await fetch(url,{cache:"no-store"}); if(!res.ok) throw new Error("HTTP "+res.status);
+    setData(await res.json(),false); b.className="banner"; b.textContent="";
   }catch(e){
-    if(!silent){
-      b.className="banner err show";
-      b.innerHTML="Could not load that URL ("+e.message+"). Likely causes: wrong URL, or running inside the chat preview (open this page on GitHub Pages or as a downloaded file instead). Showing sample data.";
-    }
-    setData({rows:SAMPLE}, true);
+    if(!silent){ b.className="banner err show";
+      b.textContent="Could not load ("+e.message+"). Open this page on GitHub Pages or as a downloaded file (the chat preview blocks outside data). Showing sample."; }
+    setData(SAMPLE,true);
   }
 }
+$("#cc").onchange=e=>{state.cc=e.target.value;render();};
+$("#q").oninput=e=>{state.q=e.target.value;render();};
+$("#load").onclick=()=>{const u=$("#url").value.trim();if(u)load(u);};
+[["#t-trend","trending"],["#t-genre","genre"]].forEach(([id,v])=>{
+  $(id).onclick=()=>{state.view=v;$("#t-trend").classList.toggle("on",v==='trending');$("#t-genre").classList.toggle("on",v==='genre');render();};
+});
+function chip(id,key){const el=$(id);el.onclick=()=>{state[key]=!state[key];el.classList.toggle("on",state[key]);render();};}
+chip("#f-new","newOnly"); chip("#f-both","bothOnly");
 
-$("#load").onclick=()=>{ const u=$("#url").value.trim(); if(u) load(u); };
-$("#q").oninput=e=>{ state.q=e.target.value; render(); };
-function chip(id,key){ const el=$(id); el.onclick=()=>{ state[key]=!state[key]; el.classList.toggle("on",state[key]); el.dataset.on=state[key]?1:0; render(); }; }
-chip("#f-rising","rising"); chip("#f-both","both");
-
-setData({rows:SAMPLE}, true);   // render sample immediately
-// When hosted next to the data (GitHub Pages / local file), auto-load live data.
-// Fails silently inside the chat preview (sandbox blocks fetch) — sample stays.
-load('trend_latest.json', true);
+setData(SAMPLE,true);
+load('trend_latest.json',true);
 </script>
 </body>
 </html>
