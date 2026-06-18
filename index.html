@@ -26,7 +26,10 @@
   .banner.err{background:#2a1414;border:1px solid #4a1f1f;color:#f0a0a0}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 6px}
   select,.bar input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:6px;font-size:13px}
-  .bar input[type=text]{min-width:200px}
+  .bar input[type=text]{min-width:180px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{background:var(--panel);color:var(--muted);border:0;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .seg button.on{background:var(--panel2);color:var(--txt)}
   .count{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
   table{width:100%;border-collapse:collapse;margin-top:4px}
   thead th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
@@ -38,18 +41,14 @@
   .title{font-weight:600}.artist{color:var(--muted);font-size:13px}
   .genre{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);background:var(--panel2);padding:2px 7px;border-radius:4px;white-space:nowrap}
   .mv{font-family:"JetBrains Mono",monospace;font-weight:600;font-size:12.5px}
-  .mv.up{color:var(--up)}.mv.down{color:var(--down)}.mv.flat{color:var(--flat)}
-  .mv.new{color:var(--up)}
+  .mv.up{color:var(--up)}.mv.down{color:var(--down)}.mv.flat{color:var(--flat)}.mv.new{color:var(--up)}
   .st{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted)}
   .dash{color:var(--dim)}
   footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.6}
 </style>
 </head>
 <body>
-<header>
-  <h1>Trend Monitor</h1>
-  <div class="stamp" id="stamp">—</div>
-</header>
+<header><h1>Trend Monitor</h1><div class="stamp" id="stamp">—</div></header>
 
 <div class="src">
   <label>data url</label>
@@ -60,6 +59,7 @@
 
 <div class="bar">
   <select id="region"></select>
+  <span class="seg"><button id="p-daily" class="on">Daily</button><button id="p-weekly">Weekly</button></span>
   <select id="genre"></select>
   <input type="text" id="q" placeholder="Search artist or title…">
   <span class="count" id="count"></span>
@@ -69,13 +69,12 @@
   <thead><tr><th class="num">#</th><th>Track</th><th>Genre</th><th class="num">Move</th><th class="num">Streams</th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
-
 <footer id="foot"></footer>
 
 <script>
-const SAMPLE = {"generated_at":"2026-06-17T21:39:54.559945+00:00","regions":["us","europe","global"],"region_labels":{"us":"US","europe":"Europe","global":"Global"},"genres":["Alternative","Country","Dance","Hip-Hop/Rap","K-Pop","Latin","Pop","R&B/Soul"],"data":{"us":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":6971017,"d7":null},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"+1","streams":6026356,"d7":null},{"rank":3,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"-1","streams":5499414,"d7":null},{"rank":4,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"+5","streams":5100000,"d7":null},{"rank":5,"title":"I Can't Love You Anymore","artist":"Ella Langley & Morgan Wallen","genre":"Country","move":"=","streams":4800000,"d7":null},{"rank":6,"title":"Bloodline","artist":"Alex Warren","genre":"Pop","move":"+2","streams":4200000,"d7":null},{"rank":7,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"-2","streams":4000000,"d7":null},{"rank":8,"title":"MUTT","artist":"Leon Thomas","genre":"R&B/Soul","move":"+3","streams":3700000,"d7":null},{"rank":9,"title":"back to friends","artist":"sombr","genre":"Alternative","move":"=","streams":3500000,"d7":null},{"rank":10,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap","move":"NEW","streams":3300000,"d7":null},{"rank":50,"title":"Espresso","artist":"Sabrina Carpenter","genre":"Pop","move":"-3","streams":1200000,"d7":null},{"rank":144,"title":"Deep Cut","artist":"Some Artist","genre":"Dance","move":"-1","streams":450000,"d7":null}],"europe":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2100000,"d7":null},{"rank":2,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":1900000,"d7":null},{"rank":3,"title":"Stargazing","artist":"Myles Smith","genre":"Pop","move":"","streams":1500000,"d7":null},{"rank":4,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"","streams":1200000,"d7":null}],"global":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000,"d7":null},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":8500000,"d7":null},{"rank":3,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"-1","streams":8000000,"d7":null},{"rank":4,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"+4","streams":6000000,"d7":null},{"rank":5,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"=","streams":5800000,"d7":null}]}};
+const SAMPLE = {"generated_at":"2026-06-18T15:27:34.474837+00:00","regions":["global","us","gb","europe"],"region_labels":{"global":"Global","us":"US","gb":"UK","europe":"Europe"},"periods":["daily","weekly"],"genres":["Country","Dance","Hip-Hop/Rap","K-Pop","Latin","Pop"],"data":{"global":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":8500000},{"rank":3,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"+4","streams":6000000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":8500000},{"rank":3,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"+4","streams":6000000}]},"us":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":6971017},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"+1","streams":6026356},{"rank":3,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"-1","streams":5499414},{"rank":4,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"+5","streams":5100000},{"rank":5,"title":"I Can't Love You Anymore","artist":"Ella Langley & Morgan Wallen","genre":"Country","move":"=","streams":4800000},{"rank":6,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+2","streams":4400000},{"rank":7,"title":"Bloodline","artist":"Alex Warren","genre":"Pop","move":"-2","streams":4200000},{"rank":8,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap","move":"NEW","streams":3300000},{"rank":50,"title":"Espresso","artist":"Sabrina Carpenter","genre":"Pop","move":"-3","streams":1200000},{"rank":144,"title":"Deep Cut","artist":"Indie Artist","genre":"Dance","move":"-1","streams":450000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":41000000},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":38000000},{"rank":3,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"-1","streams":35000000}]},"gb":{"daily":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2000000}],"weekly":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":9000000}]},"europe":{"daily":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2100000},{"rank":2,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":1900000},{"rank":3,"title":"Wunder","artist":"Ayliva","genre":"Pop","move":"","streams":1500000}],"weekly":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2100000},{"rank":2,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":1900000},{"rank":3,"title":"Wunder","artist":"Ayliva","genre":"Pop","move":"","streams":1500000}]}}};
 const $ = s=>document.querySelector(s);
-let P=null, state={region:null, genre:"", q:""};
+let P=null, state={region:null, period:"daily", genre:"", q:""};
 
 function fnum(n){ return n==null?"—":Number(n).toLocaleString(); }
 function move(m){
@@ -86,57 +85,50 @@ function move(m){
   if(m.startsWith("-")) return '<span class="mv down">▼'+m.slice(1)+'</span>';
   return '<span class="mv flat">'+m+'</span>';
 }
-
+function rowsFor(){ return ((P.data[state.region]||{})[state.period])||[]; }
 function render(){
-  const rows0 = (P.data[state.region]||[]);
-  const q = state.q.toLowerCase();
-  const rows = rows0.filter(r=>{
+  const all=rowsFor(), q=state.q.toLowerCase();
+  const rows=all.filter(r=>{
     if(state.genre && r.genre!==state.genre) return false;
     if(q && !((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q)) return false;
     return true;
   });
-  $("#rows").innerHTML = rows.map(r=>`<tr>
+  $("#rows").innerHTML=rows.map(r=>`<tr>
     <td class="rank ${r.rank<=10?'top':''}">${r.rank}</td>
     <td><div class="title">${r.title||'—'}</div><div class="artist">${r.artist||'—'}</div></td>
     <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
     <td class="num">${move(r.move)}</td>
-    <td class="num"><span class="st">${fnum(r.streams)}</span></td>
-  </tr>`).join("");
-  $("#count").textContent = rows.length+" of "+rows0.length;
+    <td class="num"><span class="st">${fnum(r.streams)}</span></td></tr>`).join("");
+  $("#count").textContent=rows.length+" of "+all.length;
 }
-
 function buildControls(){
-  $("#region").innerHTML = (P.regions||[]).map(r=>`<option value="${r}">${(P.region_labels&&P.region_labels[r])||r.toUpperCase()}</option>`).join("");
-  $("#region").value = state.region;
-  $("#genre").innerHTML = '<option value="">All genres</option>'+(P.genres||[]).map(g=>`<option value="${g}">${g}</option>`).join("");
-  $("#genre").value = state.genre;
+  $("#region").innerHTML=(P.regions||[]).map(r=>`<option value="${r}">${(P.region_labels&&P.region_labels[r])||r.toUpperCase()}</option>`).join("");
+  $("#region").value=state.region;
+  $("#genre").innerHTML='<option value="">All genres</option>'+(P.genres||[]).map(g=>`<option value="${g}">${g}</option>`).join("");
+  $("#genre").value=state.genre;
 }
-
 function setData(p,isSample){
-  P=p; state.region=(p.regions&&p.regions[0])||"global"; state.genre=""; 
-  $("#stamp").textContent = isSample?"sample data":"updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
-  $("#foot").textContent = isSample
-    ? "Sample preview. Live data is the current Spotify Top 200 by region, in rank order. Europe is an aggregate of major EU markets."
-    : "Current Spotify Top 200 by region, listed in true rank order (1 = most popular). Europe aggregates major EU markets. Genre filters the same ranked chart. Updates each scheduled pull.";
+  P=p; state.region=(p.regions&&p.regions[0])||"global"; state.period=(p.periods&&p.periods[0])||"daily"; state.genre="";
+  $("#stamp").textContent=isSample?"sample data":"updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
+  $("#foot").textContent=isSample
+    ? "Sample preview. Live data is the current Spotify charts by region (daily & weekly), in true rank order. Europe aggregates major EU markets."
+    : "Current Spotify charts by region, daily & weekly, in true rank order (1 = most popular). Europe aggregates major EU markets. Genre filters the same ranked chart. Updates each scheduled pull.";
   buildControls(); render();
 }
-
 async function load(url,silent){
   const b=$("#banner");
-  try{
-    const res=await fetch(url,{cache:"no-store"}); if(!res.ok) throw new Error("HTTP "+res.status);
+  try{ const res=await fetch(url,{cache:"no-store"}); if(!res.ok) throw new Error("HTTP "+res.status);
     setData(await res.json(),false); b.className="banner"; b.textContent="";
-  }catch(e){
-    if(!silent){ b.className="banner err show";
-      b.textContent="Could not load ("+e.message+"). Open on GitHub Pages or as a downloaded file. Showing sample."; }
-    setData(SAMPLE,true);
-  }
+  }catch(e){ if(!silent){b.className="banner err show";
+    b.textContent="Could not load ("+e.message+"). Open on GitHub Pages or as a downloaded file. Showing sample.";}
+    setData(SAMPLE,true); }
 }
-
 $("#region").onchange=e=>{state.region=e.target.value;render();};
 $("#genre").onchange=e=>{state.genre=e.target.value;render();};
 $("#q").oninput=e=>{state.q=e.target.value;render();};
 $("#load").onclick=()=>{const u=$("#url").value.trim();if(u)load(u);};
+$("#p-daily").onclick=()=>{state.period="daily";$("#p-daily").classList.add("on");$("#p-weekly").classList.remove("on");render();};
+$("#p-weekly").onclick=()=>{state.period="weekly";$("#p-weekly").classList.add("on");$("#p-daily").classList.remove("on");render();};
 
 setData(SAMPLE,true);
 load('trend_latest.json',true);
