@@ -21,8 +21,7 @@
   .src input{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:7px 10px;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:12px}
   .src button{background:var(--accent);color:#03121f;border:0;padding:7px 14px;border-radius:6px;font-weight:600;cursor:pointer}
   .banner{margin:10px 0;padding:9px 12px;border-radius:6px;font-size:12.5px;display:none}
-  .banner.show{display:block}
-  .banner.sample{background:#2a2310;border:1px solid #4a3c12;color:#e8c878}
+  .banner.show{display:block}.banner.sample{background:#2a2310;border:1px solid #4a3c12;color:#e8c878}
   .banner.err{background:#2a1414;border:1px solid #4a1f1f;color:#f0a0a0}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 6px}
   select,.bar input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:6px;font-size:13px}
@@ -44,91 +43,141 @@
   .mv.up{color:var(--up)}.mv.down{color:var(--down)}.mv.flat{color:var(--flat)}.mv.new{color:var(--up)}
   .st{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted)}
   .dash{color:var(--dim)}
+  details{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:var(--panel)}
+  summary{cursor:pointer;padding:12px 14px;font-weight:700;font-family:"Space Grotesk",sans-serif;font-size:16px;display:flex;align-items:center;gap:10px}
+  summary .gc{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);font-weight:400}
+  details .glist{padding:4px 14px 14px}
+  .grow{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #1a222b;font-size:14px;align-items:baseline}
+  .grow .r{font-family:"JetBrains Mono",monospace;color:var(--dim);width:28px;text-align:right;flex:none}
+  .grow .r.top{color:var(--accent)}
+  .grow .gt{font-weight:600}.grow .ga{color:var(--muted)}
   footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.6}
 </style>
 </head>
 <body>
 <header><h1>Trend Monitor</h1><div class="stamp" id="stamp">—</div></header>
-
 <div class="src">
   <label>data url</label>
   <input id="url" placeholder="auto-loads when hosted; paste a URL to override">
   <button id="load">Load</button>
 </div>
 <div class="banner sample show" id="banner">Built-in sample. Live data loads automatically when hosted on GitHub Pages.</div>
-
-<div class="bar">
+<div class="bar" id="mainbar">
   <select id="region"></select>
-  <span class="seg"><button id="p-daily" class="on">Daily</button><button id="p-weekly">Weekly</button></span>
-  <select id="genre"></select>
+  <span class="seg" id="viewseg">
+    <button id="v-trend" class="on">Trending</button>
+    <button id="v-genre">By Genre</button>
+  </span>
+  <span class="seg" id="periodseg">
+    <button id="p-daily" class="on">Daily</button>
+    <button id="p-weekly">Weekly</button>
+  </span>
+  <select id="gfilter"></select>
   <input type="text" id="q" placeholder="Search artist or title…">
   <span class="count" id="count"></span>
 </div>
-
-<table>
-  <thead><tr><th class="num">#</th><th>Track</th><th>Genre</th><th class="num">Move</th><th class="num">Streams</th></tr></thead>
-  <tbody id="rows"></tbody>
-</table>
+<div id="view"></div>
 <footer id="foot"></footer>
 
 <script>
-const SAMPLE = {"generated_at":"2026-06-18T15:27:34.474837+00:00","regions":["global","us","gb","europe"],"region_labels":{"global":"Global","us":"US","gb":"UK","europe":"Europe"},"periods":["daily","weekly"],"genres":["Country","Dance","Hip-Hop/Rap","K-Pop","Latin","Pop"],"data":{"global":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":8500000},{"rank":3,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"+4","streams":6000000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":8500000},{"rank":3,"title":"Dai Dai","artist":"Shakira & Burna Boy","genre":"Latin","move":"+4","streams":6000000}]},"us":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":6971017},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"+1","streams":6026356},{"rank":3,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"-1","streams":5499414},{"rank":4,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"+5","streams":5100000},{"rank":5,"title":"I Can't Love You Anymore","artist":"Ella Langley & Morgan Wallen","genre":"Country","move":"=","streams":4800000},{"rank":6,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+2","streams":4400000},{"rank":7,"title":"Bloodline","artist":"Alex Warren","genre":"Pop","move":"-2","streams":4200000},{"rank":8,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap","move":"NEW","streams":3300000},{"rank":50,"title":"Espresso","artist":"Sabrina Carpenter","genre":"Pop","move":"-3","streams":1200000},{"rank":144,"title":"Deep Cut","artist":"Indie Artist","genre":"Dance","move":"-1","streams":450000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":41000000},{"rank":2,"title":"Golden","artist":"HUNTR/X","genre":"K-Pop","move":"+1","streams":38000000},{"rank":3,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"-1","streams":35000000}]},"gb":{"daily":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2000000}],"weekly":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":9000000}]},"europe":{"daily":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2100000},{"rank":2,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":1900000},{"rank":3,"title":"Wunder","artist":"Ayliva","genre":"Pop","move":"","streams":1500000}],"weekly":[{"rank":1,"title":"GBP","artist":"Central Cee","genre":"Hip-Hop/Rap","move":"","streams":2100000},{"rank":2,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":1900000},{"rank":3,"title":"Wunder","artist":"Ayliva","genre":"Pop","move":"","streams":1500000}]}}};
-const $ = s=>document.querySelector(s);
-let P=null, state={region:null, period:"daily", genre:"", q:""};
+const SAMPLE = {"generated_at":"2026-06-18T16:02:52.636035+00:00","regions":["global","us","europe"],"region_labels":{"global":"Global","us":"US","europe":"Europe"},"periods":["daily","weekly"],"genres":["Alternative","Country","Hip-Hop/Rap","Pop"],"genre_charts":{"Pop":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop"},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop"},{"rank":3,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop"},{"rank":4,"title":"honeybee","artist":"Olivia Rodrigo","genre":"Pop"},{"rank":5,"title":"drop dead","artist":"Olivia Rodrigo","genre":"Pop"},{"rank":6,"title":"Golden","artist":"HUNTR/X","genre":"Pop"},{"rank":7,"title":"I Just Might","artist":"Bruno Mars","genre":"Pop"},{"rank":8,"title":"Man I Need","artist":"Olivia Dean","genre":"Pop"},{"rank":9,"title":"Ordinary","artist":"Alex Warren","genre":"Pop"},{"rank":10,"title":"Material Lover","artist":"SIENNA SPIRO","genre":"Pop"},{"rank":11,"title":"Pop Song 11","artist":"Pop Artist 11","genre":"Pop"},{"rank":12,"title":"Pop Song 12","artist":"Pop Artist 12","genre":"Pop"},{"rank":13,"title":"Pop Song 13","artist":"Pop Artist 13","genre":"Pop"},{"rank":14,"title":"Pop Song 14","artist":"Pop Artist 14","genre":"Pop"},{"rank":15,"title":"Pop Song 15","artist":"Pop Artist 15","genre":"Pop"},{"rank":16,"title":"Pop Song 16","artist":"Pop Artist 16","genre":"Pop"},{"rank":17,"title":"Pop Song 17","artist":"Pop Artist 17","genre":"Pop"},{"rank":18,"title":"Pop Song 18","artist":"Pop Artist 18","genre":"Pop"},{"rank":19,"title":"Pop Song 19","artist":"Pop Artist 19","genre":"Pop"},{"rank":20,"title":"Pop Song 20","artist":"Pop Artist 20","genre":"Pop"},{"rank":21,"title":"Pop Song 21","artist":"Pop Artist 21","genre":"Pop"},{"rank":22,"title":"Pop Song 22","artist":"Pop Artist 22","genre":"Pop"},{"rank":23,"title":"Pop Song 23","artist":"Pop Artist 23","genre":"Pop"},{"rank":24,"title":"Pop Song 24","artist":"Pop Artist 24","genre":"Pop"},{"rank":25,"title":"Pop Song 25","artist":"Pop Artist 25","genre":"Pop"},{"rank":26,"title":"Pop Song 26","artist":"Pop Artist 26","genre":"Pop"},{"rank":27,"title":"Pop Song 27","artist":"Pop Artist 27","genre":"Pop"},{"rank":28,"title":"Pop Song 28","artist":"Pop Artist 28","genre":"Pop"},{"rank":29,"title":"Pop Song 29","artist":"Pop Artist 29","genre":"Pop"},{"rank":30,"title":"Pop Song 30","artist":"Pop Artist 30","genre":"Pop"},{"rank":31,"title":"Pop Song 31","artist":"Pop Artist 31","genre":"Pop"},{"rank":32,"title":"Pop Song 32","artist":"Pop Artist 32","genre":"Pop"},{"rank":33,"title":"Pop Song 33","artist":"Pop Artist 33","genre":"Pop"},{"rank":34,"title":"Pop Song 34","artist":"Pop Artist 34","genre":"Pop"},{"rank":35,"title":"Pop Song 35","artist":"Pop Artist 35","genre":"Pop"},{"rank":36,"title":"Pop Song 36","artist":"Pop Artist 36","genre":"Pop"},{"rank":37,"title":"Pop Song 37","artist":"Pop Artist 37","genre":"Pop"},{"rank":38,"title":"Pop Song 38","artist":"Pop Artist 38","genre":"Pop"},{"rank":39,"title":"Pop Song 39","artist":"Pop Artist 39","genre":"Pop"},{"rank":40,"title":"Pop Song 40","artist":"Pop Artist 40","genre":"Pop"},{"rank":41,"title":"Pop Song 41","artist":"Pop Artist 41","genre":"Pop"},{"rank":42,"title":"Pop Song 42","artist":"Pop Artist 42","genre":"Pop"},{"rank":43,"title":"Pop Song 43","artist":"Pop Artist 43","genre":"Pop"},{"rank":44,"title":"Pop Song 44","artist":"Pop Artist 44","genre":"Pop"},{"rank":45,"title":"Pop Song 45","artist":"Pop Artist 45","genre":"Pop"},{"rank":46,"title":"Pop Song 46","artist":"Pop Artist 46","genre":"Pop"},{"rank":47,"title":"Pop Song 47","artist":"Pop Artist 47","genre":"Pop"},{"rank":48,"title":"Pop Song 48","artist":"Pop Artist 48","genre":"Pop"},{"rank":49,"title":"Pop Song 49","artist":"Pop Artist 49","genre":"Pop"},{"rank":50,"title":"Pop Song 50","artist":"Pop Artist 50","genre":"Pop"},{"rank":51,"title":"Pop Song 51","artist":"Pop Artist 51","genre":"Pop"},{"rank":52,"title":"Pop Song 52","artist":"Pop Artist 52","genre":"Pop"},{"rank":53,"title":"Pop Song 53","artist":"Pop Artist 53","genre":"Pop"},{"rank":54,"title":"Pop Song 54","artist":"Pop Artist 54","genre":"Pop"}],"Hip-Hop/Rap":[{"rank":1,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap"},{"rank":2,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap"},{"rank":3,"title":"MUTT","artist":"Leon Thomas","genre":"Hip-Hop/Rap"},{"rank":4,"title":"Big Mama","artist":"Latto","genre":"Hip-Hop/Rap"},{"rank":5,"title":"Raindance","artist":"Dave & Tems","genre":"Hip-Hop/Rap"},{"rank":6,"title":"Hip-Hop Song 6","artist":"Hip-Hop Artist 6","genre":"Hip-Hop/Rap"},{"rank":7,"title":"Hip-Hop Song 7","artist":"Hip-Hop Artist 7","genre":"Hip-Hop/Rap"},{"rank":8,"title":"Hip-Hop Song 8","artist":"Hip-Hop Artist 8","genre":"Hip-Hop/Rap"},{"rank":9,"title":"Hip-Hop Song 9","artist":"Hip-Hop Artist 9","genre":"Hip-Hop/Rap"},{"rank":10,"title":"Hip-Hop Song 10","artist":"Hip-Hop Artist 10","genre":"Hip-Hop/Rap"},{"rank":11,"title":"Hip-Hop Song 11","artist":"Hip-Hop Artist 11","genre":"Hip-Hop/Rap"},{"rank":12,"title":"Hip-Hop Song 12","artist":"Hip-Hop Artist 12","genre":"Hip-Hop/Rap"},{"rank":13,"title":"Hip-Hop Song 13","artist":"Hip-Hop Artist 13","genre":"Hip-Hop/Rap"},{"rank":14,"title":"Hip-Hop Song 14","artist":"Hip-Hop Artist 14","genre":"Hip-Hop/Rap"},{"rank":15,"title":"Hip-Hop Song 15","artist":"Hip-Hop Artist 15","genre":"Hip-Hop/Rap"},{"rank":16,"title":"Hip-Hop Song 16","artist":"Hip-Hop Artist 16","genre":"Hip-Hop/Rap"},{"rank":17,"title":"Hip-Hop Song 17","artist":"Hip-Hop Artist 17","genre":"Hip-Hop/Rap"},{"rank":18,"title":"Hip-Hop Song 18","artist":"Hip-Hop Artist 18","genre":"Hip-Hop/Rap"},{"rank":19,"title":"Hip-Hop Song 19","artist":"Hip-Hop Artist 19","genre":"Hip-Hop/Rap"},{"rank":20,"title":"Hip-Hop Song 20","artist":"Hip-Hop Artist 20","genre":"Hip-Hop/Rap"},{"rank":21,"title":"Hip-Hop Song 21","artist":"Hip-Hop Artist 21","genre":"Hip-Hop/Rap"},{"rank":22,"title":"Hip-Hop Song 22","artist":"Hip-Hop Artist 22","genre":"Hip-Hop/Rap"},{"rank":23,"title":"Hip-Hop Song 23","artist":"Hip-Hop Artist 23","genre":"Hip-Hop/Rap"},{"rank":24,"title":"Hip-Hop Song 24","artist":"Hip-Hop Artist 24","genre":"Hip-Hop/Rap"},{"rank":25,"title":"Hip-Hop Song 25","artist":"Hip-Hop Artist 25","genre":"Hip-Hop/Rap"},{"rank":26,"title":"Hip-Hop Song 26","artist":"Hip-Hop Artist 26","genre":"Hip-Hop/Rap"},{"rank":27,"title":"Hip-Hop Song 27","artist":"Hip-Hop Artist 27","genre":"Hip-Hop/Rap"},{"rank":28,"title":"Hip-Hop Song 28","artist":"Hip-Hop Artist 28","genre":"Hip-Hop/Rap"},{"rank":29,"title":"Hip-Hop Song 29","artist":"Hip-Hop Artist 29","genre":"Hip-Hop/Rap"},{"rank":30,"title":"Hip-Hop Song 30","artist":"Hip-Hop Artist 30","genre":"Hip-Hop/Rap"},{"rank":31,"title":"Hip-Hop Song 31","artist":"Hip-Hop Artist 31","genre":"Hip-Hop/Rap"},{"rank":32,"title":"Hip-Hop Song 32","artist":"Hip-Hop Artist 32","genre":"Hip-Hop/Rap"},{"rank":33,"title":"Hip-Hop Song 33","artist":"Hip-Hop Artist 33","genre":"Hip-Hop/Rap"},{"rank":34,"title":"Hip-Hop Song 34","artist":"Hip-Hop Artist 34","genre":"Hip-Hop/Rap"},{"rank":35,"title":"Hip-Hop Song 35","artist":"Hip-Hop Artist 35","genre":"Hip-Hop/Rap"},{"rank":36,"title":"Hip-Hop Song 36","artist":"Hip-Hop Artist 36","genre":"Hip-Hop/Rap"},{"rank":37,"title":"Hip-Hop Song 37","artist":"Hip-Hop Artist 37","genre":"Hip-Hop/Rap"},{"rank":38,"title":"Hip-Hop Song 38","artist":"Hip-Hop Artist 38","genre":"Hip-Hop/Rap"},{"rank":39,"title":"Hip-Hop Song 39","artist":"Hip-Hop Artist 39","genre":"Hip-Hop/Rap"},{"rank":40,"title":"Hip-Hop Song 40","artist":"Hip-Hop Artist 40","genre":"Hip-Hop/Rap"},{"rank":41,"title":"Hip-Hop Song 41","artist":"Hip-Hop Artist 41","genre":"Hip-Hop/Rap"},{"rank":42,"title":"Hip-Hop Song 42","artist":"Hip-Hop Artist 42","genre":"Hip-Hop/Rap"},{"rank":43,"title":"Hip-Hop Song 43","artist":"Hip-Hop Artist 43","genre":"Hip-Hop/Rap"},{"rank":44,"title":"Hip-Hop Song 44","artist":"Hip-Hop Artist 44","genre":"Hip-Hop/Rap"},{"rank":45,"title":"Hip-Hop Song 45","artist":"Hip-Hop Artist 45","genre":"Hip-Hop/Rap"},{"rank":46,"title":"Hip-Hop Song 46","artist":"Hip-Hop Artist 46","genre":"Hip-Hop/Rap"},{"rank":47,"title":"Hip-Hop Song 47","artist":"Hip-Hop Artist 47","genre":"Hip-Hop/Rap"},{"rank":48,"title":"Hip-Hop Song 48","artist":"Hip-Hop Artist 48","genre":"Hip-Hop/Rap"},{"rank":49,"title":"Hip-Hop Song 49","artist":"Hip-Hop Artist 49","genre":"Hip-Hop/Rap"},{"rank":50,"title":"Hip-Hop Song 50","artist":"Hip-Hop Artist 50","genre":"Hip-Hop/Rap"},{"rank":51,"title":"Hip-Hop Song 51","artist":"Hip-Hop Artist 51","genre":"Hip-Hop/Rap"},{"rank":52,"title":"Hip-Hop Song 52","artist":"Hip-Hop Artist 52","genre":"Hip-Hop/Rap"},{"rank":53,"title":"Hip-Hop Song 53","artist":"Hip-Hop Artist 53","genre":"Hip-Hop/Rap"},{"rank":54,"title":"Hip-Hop Song 54","artist":"Hip-Hop Artist 54","genre":"Hip-Hop/Rap"}],"Country":[{"rank":1,"title":"Choosin' Texas","artist":"Ella Langley","genre":"Country"},{"rank":2,"title":"I Knew It, I Knew You","artist":"Taylor Swift","genre":"Country"},{"rank":3,"title":"I Can't Love You Anymore","artist":"Ella Langley & Morgan Wallen","genre":"Country"},{"rank":4,"title":"Dandelion","artist":"Ella Langley","genre":"Country"},{"rank":5,"title":"Tennessee Whiskey","artist":"Chris Stapleton","genre":"Country"},{"rank":6,"title":"Country Song 6","artist":"Country Artist 6","genre":"Country"},{"rank":7,"title":"Country Song 7","artist":"Country Artist 7","genre":"Country"},{"rank":8,"title":"Country Song 8","artist":"Country Artist 8","genre":"Country"},{"rank":9,"title":"Country Song 9","artist":"Country Artist 9","genre":"Country"},{"rank":10,"title":"Country Song 10","artist":"Country Artist 10","genre":"Country"},{"rank":11,"title":"Country Song 11","artist":"Country Artist 11","genre":"Country"},{"rank":12,"title":"Country Song 12","artist":"Country Artist 12","genre":"Country"},{"rank":13,"title":"Country Song 13","artist":"Country Artist 13","genre":"Country"},{"rank":14,"title":"Country Song 14","artist":"Country Artist 14","genre":"Country"},{"rank":15,"title":"Country Song 15","artist":"Country Artist 15","genre":"Country"},{"rank":16,"title":"Country Song 16","artist":"Country Artist 16","genre":"Country"},{"rank":17,"title":"Country Song 17","artist":"Country Artist 17","genre":"Country"},{"rank":18,"title":"Country Song 18","artist":"Country Artist 18","genre":"Country"},{"rank":19,"title":"Country Song 19","artist":"Country Artist 19","genre":"Country"},{"rank":20,"title":"Country Song 20","artist":"Country Artist 20","genre":"Country"},{"rank":21,"title":"Country Song 21","artist":"Country Artist 21","genre":"Country"},{"rank":22,"title":"Country Song 22","artist":"Country Artist 22","genre":"Country"},{"rank":23,"title":"Country Song 23","artist":"Country Artist 23","genre":"Country"},{"rank":24,"title":"Country Song 24","artist":"Country Artist 24","genre":"Country"},{"rank":25,"title":"Country Song 25","artist":"Country Artist 25","genre":"Country"},{"rank":26,"title":"Country Song 26","artist":"Country Artist 26","genre":"Country"},{"rank":27,"title":"Country Song 27","artist":"Country Artist 27","genre":"Country"},{"rank":28,"title":"Country Song 28","artist":"Country Artist 28","genre":"Country"},{"rank":29,"title":"Country Song 29","artist":"Country Artist 29","genre":"Country"},{"rank":30,"title":"Country Song 30","artist":"Country Artist 30","genre":"Country"},{"rank":31,"title":"Country Song 31","artist":"Country Artist 31","genre":"Country"},{"rank":32,"title":"Country Song 32","artist":"Country Artist 32","genre":"Country"},{"rank":33,"title":"Country Song 33","artist":"Country Artist 33","genre":"Country"},{"rank":34,"title":"Country Song 34","artist":"Country Artist 34","genre":"Country"},{"rank":35,"title":"Country Song 35","artist":"Country Artist 35","genre":"Country"},{"rank":36,"title":"Country Song 36","artist":"Country Artist 36","genre":"Country"},{"rank":37,"title":"Country Song 37","artist":"Country Artist 37","genre":"Country"},{"rank":38,"title":"Country Song 38","artist":"Country Artist 38","genre":"Country"},{"rank":39,"title":"Country Song 39","artist":"Country Artist 39","genre":"Country"},{"rank":40,"title":"Country Song 40","artist":"Country Artist 40","genre":"Country"},{"rank":41,"title":"Country Song 41","artist":"Country Artist 41","genre":"Country"},{"rank":42,"title":"Country Song 42","artist":"Country Artist 42","genre":"Country"},{"rank":43,"title":"Country Song 43","artist":"Country Artist 43","genre":"Country"},{"rank":44,"title":"Country Song 44","artist":"Country Artist 44","genre":"Country"},{"rank":45,"title":"Country Song 45","artist":"Country Artist 45","genre":"Country"},{"rank":46,"title":"Country Song 46","artist":"Country Artist 46","genre":"Country"},{"rank":47,"title":"Country Song 47","artist":"Country Artist 47","genre":"Country"},{"rank":48,"title":"Country Song 48","artist":"Country Artist 48","genre":"Country"},{"rank":49,"title":"Country Song 49","artist":"Country Artist 49","genre":"Country"},{"rank":50,"title":"Country Song 50","artist":"Country Artist 50","genre":"Country"},{"rank":51,"title":"Country Song 51","artist":"Country Artist 51","genre":"Country"},{"rank":52,"title":"Country Song 52","artist":"Country Artist 52","genre":"Country"},{"rank":53,"title":"Country Song 53","artist":"Country Artist 53","genre":"Country"},{"rank":54,"title":"Country Song 54","artist":"Country Artist 54","genre":"Country"}]},"data":{"global":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000},{"rank":2,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"+1","streams":8500000},{"rank":3,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":7000000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":9000000},{"rank":2,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"+1","streams":8500000},{"rank":3,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":7000000}]},"us":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":2510938},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"+1","streams":1820512},{"rank":3,"title":"honeybee","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":1620492},{"rank":4,"title":"drop dead","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":1547874},{"rank":5,"title":"Choosin' Texas","artist":"Ella Langley","genre":"Country","move":"+2","streams":1546826},{"rank":6,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"+4","streams":1404050},{"rank":7,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"+2","streams":1116384},{"rank":8,"title":"Earrings","artist":"Malcolm Todd","genre":"Alternative","move":"=","streams":1263818},{"rank":9,"title":"I Knew It, I Knew You","artist":"Taylor Swift","genre":"Country","move":"=","streams":969567},{"rank":10,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap","move":"NEW","streams":900000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":2510938},{"rank":2,"title":"the cure","artist":"Olivia Rodrigo","genre":"Pop","move":"+1","streams":1820512},{"rank":3,"title":"honeybee","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":1620492},{"rank":4,"title":"drop dead","artist":"Olivia Rodrigo","genre":"Pop","move":"=","streams":1547874},{"rank":5,"title":"Choosin' Texas","artist":"Ella Langley","genre":"Country","move":"+2","streams":1546826},{"rank":6,"title":"hate that i made you love me","artist":"Ariana Grande","genre":"Pop","move":"+4","streams":1404050},{"rank":7,"title":"Janice STFU","artist":"Drake","genre":"Hip-Hop/Rap","move":"+2","streams":1116384},{"rank":8,"title":"Earrings","artist":"Malcolm Todd","genre":"Alternative","move":"=","streams":1263818},{"rank":9,"title":"I Knew It, I Knew You","artist":"Taylor Swift","genre":"Country","move":"=","streams":969567},{"rank":10,"title":"No Tipo","artist":"Kennyxx","genre":"Hip-Hop/Rap","move":"NEW","streams":900000}]},"europe":{"daily":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":2100000},{"rank":2,"title":"Rein Me In","artist":"Sam Fender","genre":"Alternative","move":"","streams":1500000}],"weekly":[{"rank":1,"title":"stupid song","artist":"Olivia Rodrigo","genre":"Pop","move":"","streams":2100000},{"rank":2,"title":"Rein Me In","artist":"Sam Fender","genre":"Alternative","move":"","streams":1500000}]}}};
+const $=s=>document.querySelector(s);
+let P=null, state={region:null,period:"daily",genre:"",q:"",view:"trending"};
 
-function fnum(n){ return n==null?"—":Number(n).toLocaleString(); }
+function fnum(n){return n==null?"—":Number(n).toLocaleString();}
 function move(m){
-  if(!m||m==="") return '<span class="mv flat">—</span>';
-  if(m==="NEW"||m==="RE") return '<span class="mv new">'+m+'</span>';
-  if(m==="=") return '<span class="mv flat">=</span>';
-  if(m.startsWith("+")) return '<span class="mv up">▲'+m.slice(1)+'</span>';
-  if(m.startsWith("-")) return '<span class="mv down">▼'+m.slice(1)+'</span>';
-  return '<span class="mv flat">'+m+'</span>';
+  if(!m||m==="")return'<span class="mv flat">—</span>';
+  if(m==="NEW"||m==="RE")return'<span class="mv new">'+m+'</span>';
+  if(m==="=")return'<span class="mv flat">=</span>';
+  if(m.startsWith("+"))return'<span class="mv up">▲'+m.slice(1)+'</span>';
+  if(m.startsWith("-"))return'<span class="mv down">▼'+m.slice(1)+'</span>';
+  return'<span class="mv flat">'+m+'</span>';
 }
-function rowsFor(){ return ((P.data[state.region]||{})[state.period])||[]; }
-function render(){
-  const all=rowsFor(), q=state.q.toLowerCase();
+
+function renderTrending(){
+  $("#periodseg").style.display="inline-flex";
+  $("#gfilter").style.display="";
+  const all=((P.data[state.region]||{})[state.period])||[];
+  const q=state.q.toLowerCase();
   const rows=all.filter(r=>{
-    if(state.genre && r.genre!==state.genre) return false;
-    if(q && !((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q)) return false;
+    if(state.genre&&r.genre!==state.genre)return false;
+    if(q&&!((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q))return false;
     return true;
   });
-  $("#rows").innerHTML=rows.map(r=>`<tr>
-    <td class="rank ${r.rank<=10?'top':''}">${r.rank}</td>
-    <td><div class="title">${r.title||'—'}</div><div class="artist">${r.artist||'—'}</div></td>
-    <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
-    <td class="num">${move(r.move)}</td>
-    <td class="num"><span class="st">${fnum(r.streams)}</span></td></tr>`).join("");
   $("#count").textContent=rows.length+" of "+all.length;
+  $("#view").innerHTML=`<table><thead><tr><th class="num">#</th><th>Track</th><th>Genre</th><th class="num">Move</th><th class="num">Streams</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td class="rank ${r.rank<=10?'top':''}">${r.rank}</td>
+      <td><div class="title">${r.title||'—'}</div><div class="artist">${r.artist||'—'}</div></td>
+      <td>${r.genre?'<span class="genre">'+r.genre+'</span>':'<span class="dash">—</span>'}</td>
+      <td class="num">${move(r.move)}</td>
+      <td class="num"><span class="st">${fnum(r.streams)}</span></td></tr>`).join("")+
+    `</tbody></table>`;
 }
+
+function renderGenre(){
+  $("#periodseg").style.display="none";
+  $("#gfilter").style.display="none";
+  const gc=P.genre_charts||{};
+  const names=Object.keys(gc).filter(g=>gc[g]&&gc[g].length).sort((a,b)=>gc[b].length-gc[a].length);
+  const q=state.q.toLowerCase();
+  if(!names.length){
+    $("#view").innerHTML='<p style="padding:14px;color:var(--muted)">No genre charts available yet. Run the pull to populate them.</p>';
+    $("#count").textContent=""; return;
+  }
+  let total=0;
+  $("#view").innerHTML=names.map((g,idx)=>{
+    let list=gc[g].filter(r=>!q||((r.artist||"")+" "+(r.title||"")).toLowerCase().includes(q));
+    total+=list.length;
+    const body=list.map(r=>`<div class="grow"><span class="r ${r.rank<=10?'top':''}">${r.rank}</span>
+      <span><span class="gt">${r.title}</span> <span class="ga">— ${r.artist}</span></span></div>`).join("")
+      ||'<div class="grow"><span class="ga">no matches</span></div>';
+    return`<details ${idx<3||q?'open':''}><summary>${g} <span class="gc">${list.length} songs</span></summary><div class="glist">${body}</div></details>`;
+  }).join("");
+  $("#count").textContent=total+" songs · "+names.length+" genres";
+}
+
+function render(){state.view==="trending"?renderTrending():renderGenre();}
+
 function buildControls(){
   $("#region").innerHTML=(P.regions||[]).map(r=>`<option value="${r}">${(P.region_labels&&P.region_labels[r])||r.toUpperCase()}</option>`).join("");
   $("#region").value=state.region;
-  $("#genre").innerHTML='<option value="">All genres</option>'+(P.genres||[]).map(g=>`<option value="${g}">${g}</option>`).join("");
-  $("#genre").value=state.genre;
+  const trendGenres=new Set();
+  for(const rows of Object.values((P.data[state.region]||{}))){
+    if(Array.isArray(rows)) rows.forEach(r=>{if(r.genre)trendGenres.add(r.genre);});
+  }
+  $("#gfilter").innerHTML='<option value="">All genres</option>'+[...trendGenres].sort().map(g=>`<option value="${g}">${g}</option>`).join("");
+  $("#gfilter").value=state.genre;
 }
+
 function setData(p,isSample){
   P=p; state.region=(p.regions&&p.regions[0])||"global"; state.period=(p.periods&&p.periods[0])||"daily"; state.genre="";
   $("#stamp").textContent=isSample?"sample data":"updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
   $("#foot").textContent=isSample
-    ? "Sample preview. Live data is the current Spotify charts by region (daily & weekly), in true rank order. Europe aggregates major EU markets."
-    : "Current Spotify charts by region, daily & weekly, in true rank order (1 = most popular). Europe aggregates major EU markets. Genre filters the same ranked chart. Updates each scheduled pull.";
+    ?"Sample preview. Trending = Spotify chart ranked by streaming. By Genre = per-genre charts filtered to recent releases only."
+    :"Trending = current Spotify charts by region (daily & weekly), true rank order. By Genre = per-genre charts, recent releases only (no catalog noise). Updates each scheduled pull.";
   buildControls(); render();
 }
+
 async function load(url,silent){
   const b=$("#banner");
-  try{ const res=await fetch(url,{cache:"no-store"}); if(!res.ok) throw new Error("HTTP "+res.status);
-    setData(await res.json(),false); b.className="banner"; b.textContent="";
-  }catch(e){ if(!silent){b.className="banner err show";
+  try{const res=await fetch(url,{cache:"no-store"});if(!res.ok)throw new Error("HTTP "+res.status);
+    setData(await res.json(),false);b.className="banner";b.textContent="";
+  }catch(e){if(!silent){b.className="banner err show";
     b.textContent="Could not load ("+e.message+"). Open on GitHub Pages or as a downloaded file. Showing sample.";}
-    setData(SAMPLE,true); }
+    setData(SAMPLE,true);}
 }
-$("#region").onchange=e=>{state.region=e.target.value;render();};
-$("#genre").onchange=e=>{state.genre=e.target.value;render();};
+
+function setView(v){state.view=v;$("#v-trend").classList.toggle("on",v==="trending");$("#v-genre").classList.toggle("on",v==="genre");render();}
+function setPeriod(p){state.period=p;$("#p-daily").classList.toggle("on",p==="daily");$("#p-weekly").classList.toggle("on",p==="weekly");render();}
+
+$("#region").onchange=e=>{state.region=e.target.value;buildControls();render();};
+$("#gfilter").onchange=e=>{state.genre=e.target.value;render();};
 $("#q").oninput=e=>{state.q=e.target.value;render();};
 $("#load").onclick=()=>{const u=$("#url").value.trim();if(u)load(u);};
-$("#p-daily").onclick=()=>{state.period="daily";$("#p-daily").classList.add("on");$("#p-weekly").classList.remove("on");render();};
-$("#p-weekly").onclick=()=>{state.period="weekly";$("#p-weekly").classList.add("on");$("#p-daily").classList.remove("on");render();};
+$("#v-trend").onclick=()=>setView("trending");
+$("#v-genre").onclick=()=>setView("genre");
+$("#p-daily").onclick=()=>setPeriod("daily");
+$("#p-weekly").onclick=()=>setPeriod("weekly");
 
 setData(SAMPLE,true);
 load('trend_latest.json',true);
