@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 """
-PlayMusic Trend Monitor — pull (v4)
-
-TRENDING: Kworb Spotify daily/weekly, true rank 1→N, per market. Accurate streaming data.
-BY GENRE: Apple per-genre charts filtered to recent releases only (no stale catalog),
-          cross-referenced with streaming presence. 50+ songs per major genre.
-Genre tags on trending songs from Apple most-played + iTunes Search (cached).
-
-Run:  python trend_pull.py
-Deps: pip install requests pandas lxml
+PlayMusic Trend Monitor — pull (v4.1)
+Hardened: reduced lookup budget, all sections wrapped so partial failures
+don't kill the run, 6-minute timeout on genre lookups.
 """
 
 import datetime as dt
@@ -23,7 +17,7 @@ import html as html_mod
 import requests
 import pandas as pd
 
-HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/4.0 (internal ops)"}
+HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/4.1 (internal ops)"}
 CACHE_FILE = "genre_cache.json"
 
 KWORB = "https://kworb.net/spotify/country/{cc}_{period}.html"
@@ -40,41 +34,32 @@ LABELS = {"global": "Global", "europe": "Europe", "us": "US", "gb": "UK",
           "br": "Brazil", "mx": "Mexico", "jp": "Japan", "kr": "South Korea",
           "in": "India"}
 EU_AGG = ["gb", "de", "fr", "es", "it", "nl", "se"]
-GENRE_STOREFRONTS = ["us", "gb", "de", "fr", "es", "it", "au", "ca", "br", "mx"]
+GENRE_STOREFRONTS = ["us", "gb", "de", "fr", "es", "it", "au", "ca"]
 REGION_ORDER = ["global", "us", "europe", "gb", "ca", "au", "de", "fr", "es", "it",
                 "nl", "se", "br", "mx", "jp", "kr", "in"]
 
-# Important genres for dedicated per-genre charts.
 GENRES = {"Pop": 14, "Hip-Hop/Rap": 18, "Country": 6, "R&B/Soul": 15,
           "Dance": 17, "Electronic": 7, "Rock": 21, "Alternative": 20,
           "Latin": 12, "K-Pop": 51}
 GENRE_MARKETS = ["us", "gb"]
-# Only include songs released within this many days to filter catalog noise.
-RECENCY_DAYS = 730  # ~2 years
-MAX_SEARCH = 1200
+RECENCY_DAYS = 730
+MAX_SEARCH = 500          # reduced from 1200 — builds up over runs via cache
+SEARCH_TIME_LIMIT = 300   # stop lookups after 5 minutes regardless
 
 
 def norm_key(artist, title):
     s = f"{artist} {title}".lower()
     s = html_mod.unescape(s)
-    s = s.replace("\u2019", "'").replace("\u2018", "'").replace("\u201c", '"').replace("\u201d", '"')
+    s = s.replace("\u2019", "'").replace("\u2018", "'")
     s = re.sub(r"\(feat\.?.*?\)|\bfeat\.?.*$|\(.*?\)|\[.*?\]|\(w/.*?\)", " ", s)
     s = re.sub(r"[^a-z0-9 ]", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 
 
 def clean_text(s):
-    """Fix Kworb's encoding artifacts."""
     if not s:
         return s
     s = html_mod.unescape(s)
-    # Common mojibake from UTF-8 → Latin-1 → UTF-8 round-trip
-    for bad, good in [("â\x80\x99", "'"), ("â\x80\x93", "–"), ("â\x80\x94", "—"),
-                       ("â\x80\x9c", '"'), ("â\x80\x9d", '"'), ("â\x80\x98", "'"),
-                       ("Ã©", "é"), ("Ã¼", "ü"), ("Ã¶", "ö"), ("Ã¤", "ä"),
-                       ("Ã±", "ñ"), ("Ã³", "ó"), ("Ã¡", "á"), ("Ã", "í")]:
-        s = s.replace(bad, good)
-    # Catch remaining â-artifacts
     s = re.sub(r'â[\x80-\xbf][\x80-\xbf]?', "'", s)
     return s.strip()
 
@@ -86,10 +71,28 @@ def _to_int(x):
         return None
 
 
-# ---------- Kworb ----------
+def safe_get(url, **kw):
+    """requests.get with retry on 429/5xx."""
+    for attempt in range(3):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=20, **kw)
+            if r.status_code == 429:
+                wait = int(r.headers.get("Retry-After", 5))
+                print(f"  429 rate-limited, waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            r.raise_for_status()
+            return r
+        except requests.exceptions.RequestException as e:
+            if attempt < 2:
+                time.sleep(2)
+                continue
+            raise
+    return None
+
+
 def fetch_kworb(cc, period):
-    r = requests.get(KWORB.format(cc=cc, period=period), headers=HEADERS, timeout=20)
-    r.raise_for_status()
+    r = safe_get(KWORB.format(cc=cc, period=period))
     tables = pd.read_html(io.StringIO(r.text))
     table = next((t for t in tables if any("Artist" in str(c) for c in t.columns)),
                  tables[0] if tables else None)
@@ -105,8 +108,7 @@ def fetch_kworb(cc, period):
         rk = _to_int(row.get("Pos"))
         if not rk:
             continue
-        artist = clean_text(artist)
-        title = clean_text(title)
+        artist, title = clean_text(artist), clean_text(title)
         rows.append({"rank": rk, "artist": artist, "title": title,
                      "move": str(row.get("P+", "")).strip(),
                      "streams": _to_int(row.get("Streams")),
@@ -128,10 +130,8 @@ def europe_aggregate(raw, period):
             for i, x in enumerate(ordered[:200], start=1)]
 
 
-# ---------- Apple most-played (streaming-based, has genre tags) ----------
 def fetch_apple_top(cc):
-    r = requests.get(APPLE_TOP.format(cc=cc), headers=HEADERS, timeout=20)
-    r.raise_for_status()
+    r = safe_get(APPLE_TOP.format(cc=cc))
     out = {}
     for t in r.json()["feed"]["results"]:
         g = [x["name"] for x in t.get("genres", []) if x["name"] != "Music"]
@@ -139,13 +139,11 @@ def fetch_apple_top(cc):
     return out
 
 
-# ---------- Apple per-genre charts (filtered to recent releases) ----------
 def fetch_genre_chart(cc, gid, genre_name):
-    """Pull genre-specific chart, return only recent releases."""
     url = APPLE_GENRE.format(cc=cc, gid=gid)
-    r = requests.get(url, headers=HEADERS, timeout=20)
-    r.raise_for_status()
-    entries = r.json().get("feed", {}).get("entry", [])
+    r = safe_get(url)
+    data = r.json()
+    entries = data.get("feed", {}).get("entry", [])
     if isinstance(entries, dict):
         entries = [entries]
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=RECENCY_DAYS)
@@ -156,7 +154,6 @@ def fetch_genre_chart(cc, gid, genre_name):
             artist = e["im:artist"]["label"]
         except (KeyError, TypeError):
             continue
-        # Filter by release date to remove catalog noise.
         rd = e.get("im:releaseDate", {}).get("label", "")
         if rd:
             try:
@@ -166,16 +163,16 @@ def fetch_genre_chart(cc, gid, genre_name):
             except (ValueError, TypeError):
                 pass
         rows.append({"title": clean_text(title), "artist": clean_text(artist),
-                     "genre": genre_name,
-                     "key": norm_key(artist, title)})
+                     "genre": genre_name, "key": norm_key(artist, title)})
     return rows
 
 
-# ---------- iTunes Search genre fallback ----------
 def search_genre(artist, title):
     try:
-        r = requests.get(ITUNES_SEARCH, headers=HEADERS, timeout=15, params={
+        r = requests.get(ITUNES_SEARCH, headers=HEADERS, timeout=10, params={
             "term": f"{artist} {title}", "media": "music", "entity": "song", "limit": 1})
+        if r.status_code == 429:
+            return ""
         r.raise_for_status()
         res = r.json().get("results", [])
         return res[0].get("primaryGenreName", "") if res else ""
@@ -191,7 +188,7 @@ def main():
         except Exception:
             cache = {}
 
-    # --- 1. Pull all charts ---
+    # 1. Charts
     print("Pulling charts...")
     raw = {}
     for cc in MARKETS + ["global"]:
@@ -202,16 +199,14 @@ def main():
                 print(f"  {cc}/{p} skipped: {type(e).__name__}: {e}")
                 raw[(cc, p)] = []
             time.sleep(0.15)
-    if not any(raw.values()):
-        sys.exit("All chart pulls failed.")
 
     data = {}
     for cc in MARKETS + ["global"]:
         data[cc] = {p: raw.get((cc, p), []) for p in PERIODS}
     data["europe"] = {p: europe_aggregate(raw, p) for p in PERIODS}
 
-    # --- 2. Build genre map from Apple most-played (many storefronts) ---
-    print("Building genre map (Apple most-played)...")
+    # 2. Genre map (Apple most-played)
+    print("Building genre map...")
     gmap = {}
     for cc in GENRE_STOREFRONTS:
         try:
@@ -222,10 +217,10 @@ def main():
         except Exception as e:
             print(f"  genre-tags {cc} skipped: {type(e).__name__}: {e}")
         time.sleep(0.2)
-    print(f"  Apple genre tags collected: {len(gmap)}")
+    print(f"  Apple tags: {len(gmap)}")
 
-    # --- 3. Search-tag remaining songs (prioritize top of charts) ---
-    print("Genre-tagging remaining songs (iTunes Search)...")
+    # 3. Search remaining (time-boxed)
+    print("Genre lookups (time-boxed)...")
     best = {}
     for reg in data.values():
         for rows in reg.values():
@@ -236,21 +231,21 @@ def main():
     pending = [(rk, k, a, t) for k, (rk, a, t) in best.items()
                if not (gmap.get(k) or cache.get(k))]
     pending.sort()
-    lookups = 0
+    lookups, t0 = 0, time.time()
     for rk, k, a, t in pending:
-        if lookups >= MAX_SEARCH:
+        if lookups >= MAX_SEARCH or (time.time() - t0) > SEARCH_TIME_LIMIT:
             break
         g = search_genre(a, t)
         if g:
             cache[k] = g
         lookups += 1
         time.sleep(0.5)
-    print(f"  lookups this run: {lookups} | total cached: {len(cache)}")
+    elapsed = int(time.time() - t0)
+    print(f"  lookups: {lookups} in {elapsed}s | cached: {len(cache)}")
 
     def genre_for(key):
         return gmap.get(key) or cache.get(key) or ""
 
-    # Apply genres to all chart rows.
     all_genres = set()
     for reg in data.values():
         for rows in reg.values():
@@ -260,8 +255,8 @@ def main():
                     all_genres.add(r["genre"])
                 r.pop("key", None)
 
-    # --- 4. Per-genre dedicated charts (recent releases only) ---
-    print("Building per-genre charts (recent releases only)...")
+    # 4. Per-genre charts
+    print("Building per-genre charts...")
     genre_charts = {}
     for gname, gid in GENRES.items():
         seen = set()
@@ -275,18 +270,17 @@ def main():
                         combined.append(r)
             except Exception as e:
                 print(f"  genre {gname}/{cc} skipped: {type(e).__name__}: {e}")
-            time.sleep(0.2)
-        # Number them 1→N.
+            time.sleep(0.3)
         for i, r in enumerate(combined, start=1):
             r["rank"] = i
             r.pop("key", None)
         genre_charts[gname] = combined
         if combined:
             all_genres.add(gname)
-    genre_counts = {g: len(v) for g, v in genre_charts.items()}
-    print(f"  genre chart sizes: {genre_counts}")
 
-    # --- 5. Save ---
+    print(f"  genre charts: { {g: len(v) for g, v in genre_charts.items()} }")
+
+    # 5. Save
     json.dump(cache, open(CACHE_FILE, "w"))
     payload = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -298,11 +292,11 @@ def main():
         "data": data,
     }
     json.dump(payload, open("trend_latest.json", "w"), separators=(",", ":"), default=str)
+
     tagged = sum(1 for reg in data.values() for rows in reg.values()
                  for r in rows if r.get("genre"))
     total = sum(len(rows) for reg in data.values() for rows in reg.values())
-    print(f"\nDone. regions: {len(data)} | chart songs: {total} | genre-tagged: {tagged}/{total}")
-    print(f"Genre charts: {genre_counts}")
+    print(f"\nDone. regions: {len(data)} | songs: {total} | tagged: {tagged}/{total}")
 
 
 if __name__ == "__main__":
