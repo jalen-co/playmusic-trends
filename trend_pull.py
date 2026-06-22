@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-PlayMusic Trend Monitor — pull (v5)
-Maximum data volume. No search lookups.
-Trending: Spotify Top 200 per market (Kworb). Accurate, ranked 1-200.
-Genre: Apple per-genre charts from 6 markets x 200 limit, recency-filtered, deduped.
+PlayMusic Trend Monitor — pull (v6)
+Built for the PlayMusic ops team.
+Adds: Apple cross-reference (surface signal), genre momentum data.
 """
 
 import datetime as dt
@@ -17,7 +16,7 @@ import html as html_mod
 import requests
 import pandas as pd
 
-HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/5.0 (internal ops)"}
+HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/6.0 (internal ops)"}
 
 KWORB = "https://kworb.net/spotify/country/{cc}_{period}.html"
 APPLE_TOP = "https://rss.applemarketingtools.com/api/v2/{cc}/music/most-played/200/songs.json"
@@ -38,7 +37,6 @@ REGION_ORDER = ["global", "us", "europe", "gb", "ca", "au", "de", "fr", "es", "i
 GENRES = {"Pop": 14, "Hip-Hop/Rap": 18, "Country": 6, "R&B/Soul": 15,
           "Dance": 17, "Electronic": 7, "Rock": 21, "Alternative": 20,
           "Latin": 12, "K-Pop": 51}
-# Pull genres from 6 markets for maximum depth.
 GENRE_MARKETS = ["us", "gb", "au", "ca", "de", "fr"]
 RECENCY_DAYS = 730
 
@@ -102,12 +100,14 @@ def europe_aggregate(raw, period):
 
 
 def fetch_apple_top(cc):
+    """Returns {norm_key: {"genre": str, "apple_rank": int}}"""
     r = requests.get(APPLE_TOP.format(cc=cc), headers=HEADERS, timeout=20)
     r.raise_for_status()
     out = {}
-    for t in r.json()["feed"]["results"]:
+    for i, t in enumerate(r.json()["feed"]["results"], start=1):
         g = [x["name"] for x in t.get("genres", []) if x["name"] != "Music"]
-        out[norm_key(t["artistName"], t["name"])] = g[0] if g else ""
+        out[norm_key(t["artistName"], t["name"])] = {
+            "genre": g[0] if g else "", "apple_rank": i}
     return out
 
 
@@ -133,16 +133,55 @@ def fetch_genre_chart(cc, gid, genre_name):
     return rows
 
 
+def compute_surface(r):
+    """Surface score: how strongly this song signals 'add to PlayMusic catalog'."""
+    s = 0
+    mv = r.get("move", "")
+    if mv in ("NEW", "RE"): s += 3
+    elif mv.startswith("+"):
+        v = _to_int(mv)
+        if v and v >= 5: s += 2
+        elif v: s += 1
+    if r.get("on_apple"): s += 2
+    if r.get("rank", 999) <= 20: s += 2
+    elif r.get("rank", 999) <= 50: s += 1
+    return s
+
+
+def compute_genre_momentum(data):
+    """Per-genre: count of songs, how many rising vs falling."""
+    # Use global daily as the reference chart.
+    rows = data.get("global", {}).get("daily", [])
+    if not rows:
+        rows = data.get("us", {}).get("daily", [])
+    genres = {}
+    for r in rows:
+        g = r.get("genre")
+        if not g: continue
+        if g not in genres:
+            genres[g] = {"count": 0, "rising": 0, "falling": 0, "new": 0}
+        genres[g]["count"] += 1
+        mv = r.get("move", "")
+        if mv in ("NEW", "RE"): genres[g]["new"] += 1
+        elif mv.startswith("+"): genres[g]["rising"] += 1
+        elif mv.startswith("-"): genres[g]["falling"] += 1
+    # Compute net momentum.
+    for g, v in genres.items():
+        v["net"] = v["rising"] + v["new"] - v["falling"]
+        total_moving = v["rising"] + v["falling"] + v["new"]
+        v["heat"] = round(v["net"] / max(total_moving, 1), 2)
+    return dict(sorted(genres.items(), key=lambda x: -x[1]["count"]))
+
+
 def main():
     t0 = time.time()
 
     # 1. Spotify charts
-    print("1/3 Pulling Spotify charts...")
+    print("1/4 Spotify charts...")
     raw = {}
     for cc in MARKETS + ["global"]:
         for p in PERIODS:
-            try:
-                raw[(cc, p)] = fetch_kworb(cc, p)
+            try: raw[(cc, p)] = fetch_kworb(cc, p)
             except Exception as e:
                 print(f"  {cc}/{p} skipped: {e}")
                 raw[(cc, p)] = []
@@ -151,32 +190,38 @@ def main():
     for cc in MARKETS + ["global"]:
         data[cc] = {p: raw.get((cc, p), []) for p in PERIODS}
     data["europe"] = {p: europe_aggregate(raw, p) for p in PERIODS}
-    chart_songs = sum(len(rows) for reg in data.values() for rows in reg.values())
-    print(f"  charts done: {chart_songs} total rows across all markets ({int(time.time()-t0)}s)")
 
-    # 2. Genre tags from Apple most-played
-    print("2/3 Genre tagging (Apple most-played)...")
-    gmap = {}
+    # 2. Apple cross-reference + genre tags
+    print("2/4 Apple cross-reference...")
+    apple = {}  # combined across storefronts
     for cc in GENRE_STOREFRONTS:
         try:
-            gm = fetch_apple_top(cc)
-            for k, g in gm.items():
-                if g and k not in gmap: gmap[k] = g
+            am = fetch_apple_top(cc)
+            for k, v in am.items():
+                if k not in apple:
+                    apple[k] = v
+                elif not apple[k]["genre"] and v["genre"]:
+                    apple[k]["genre"] = v["genre"]
         except Exception as e:
             print(f"  {cc} skipped: {e}")
         time.sleep(0.2)
-    print(f"  tags: {len(gmap)} ({int(time.time()-t0)}s)")
+    print(f"  apple tags: {len(apple)}")
 
+    # Apply to chart rows.
     all_genres = set()
     for reg in data.values():
         for rows in reg.values():
             for r in rows:
-                r["genre"] = gmap.get(r["key"], "")
+                am = apple.get(r["key"])
+                r["genre"] = (am["genre"] if am else "") or ""
+                r["on_apple"] = am is not None
+                r["apple_rank"] = am["apple_rank"] if am else None
+                r["surface"] = compute_surface(r)
                 if r["genre"]: all_genres.add(r["genre"])
                 r.pop("key", None)
 
-    # 3. Per-genre charts (6 markets x 200 limit x 10 genres)
-    print("3/3 Genre charts (6 markets x 10 genres)...")
+    # 3. Genre charts
+    print("3/4 Genre charts (6 markets x 10 genres)...")
     genre_charts = {}
     for gname, gid in GENRES.items():
         seen, combined = set(), []
@@ -195,24 +240,24 @@ def main():
         genre_charts[gname] = combined
         if combined: all_genres.add(gname)
 
-    gc_sizes = {g: len(v) for g, v in genre_charts.items()}
-    gc_total = sum(gc_sizes.values())
-    print(f"  genre charts: {gc_sizes}")
-    print(f"  genre total: {gc_total} songs ({int(time.time()-t0)}s)")
+    # 4. Genre momentum
+    print("4/4 Genre momentum...")
+    momentum = compute_genre_momentum(data)
 
-    # 4. Save
+    # Save
     payload = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "regions": [r for r in REGION_ORDER if r in data],
         "region_labels": LABELS, "periods": PERIODS,
-        "genres": sorted(all_genres), "genre_charts": genre_charts, "data": data,
+        "genres": sorted(all_genres), "genre_charts": genre_charts,
+        "genre_momentum": momentum, "data": data,
     }
     json.dump(payload, open("trend_latest.json", "w"), separators=(",", ":"), default=str)
 
-    tagged = sum(1 for reg in data.values() for rows in reg.values() for r in rows if r.get("genre"))
-    total = chart_songs + gc_total
+    chart_songs = sum(len(rows) for reg in data.values() for rows in reg.values())
+    gc_total = sum(len(v) for v in genre_charts.values())
     elapsed = int(time.time() - t0)
-    print(f"\nDone in {elapsed}s. Trending: {chart_songs} | Genre: {gc_total} | Total: {total} | Tagged: {tagged}/{chart_songs}")
+    print(f"\nDone in {elapsed}s | charts: {chart_songs} | genre: {gc_total} | momentum genres: {len(momentum)}")
 
 
 if __name__ == "__main__":
