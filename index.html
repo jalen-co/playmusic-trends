@@ -84,7 +84,7 @@ footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-si
     <button id="p-weekly">Weekly</button>
   </span>
   <select id="genre"></select>
-  <span class="chip" id="f-surface">Surface picks</span>
+  <span class="chip" id="f-surface" title="New entries, big climbers, top 50, or on both Spotify &amp; Apple">Surface picks</span>
   <input type="text" id="q" placeholder="Search…">
   <span class="count" id="count"></span>
 </div>
@@ -180,7 +180,7 @@ function setData(p,isSample){
   P=p;state.region=(p.regions&&p.regions[0])||"global";state.period="daily";state.genre="";state.surfaceOnly=false;
   $("#f-surface").classList.remove("on");
   $("#stamp").textContent=isSample?"sample":"updated "+(p.generated_at?new Date(p.generated_at).toLocaleString():"?");
-  $("#foot").textContent="Trending = Spotify Top 200, true rank order. Surface picks = new entries, big climbers, and/or charting on Apple too. Genre dropdown = dedicated per-genre charts (recent releases only). Genre momentum = rising/falling share of the global chart.";
+  $("#foot").innerHTML="<strong>Surface picks</strong> = songs worth adding to PlayMusic: new chart entries, climbing fast (+5 or more), top 50, or trending on both Spotify &amp; Apple. Untagged songs are deprioritized.<br>Trending = Spotify Top 200, true rank order. Genre dropdown = dedicated charts (last 2 years only). Momentum = genre share of global chart."+(p.stats&&p.stats.unique_songs?" <strong>"+p.stats.unique_songs.toLocaleString()+" unique songs</strong> total.":"");
   renderMomentum();buildControls();render();
 }
 
