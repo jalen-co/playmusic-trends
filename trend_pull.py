@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-PlayMusic Trend Monitor — pull (v7.1)
-Genre tags from: genre charts + iTunes general top songs (both itunes.apple.com, reliable).
-Apple most-played as bonus cross-ref.
+PlayMusic Trend Monitor — pull (v8)
+Targeting 5K+ unique songs. 14 genres × 12 markets, 3yr recency.
 """
 
 import datetime as dt
@@ -16,7 +15,7 @@ import html as html_mod
 import requests
 import pandas as pd
 
-HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/7.1 (internal ops)"}
+HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/8.0 (internal ops)"}
 
 KWORB = "https://kworb.net/spotify/country/{cc}_{period}.html"
 APPLE_TOP = "https://rss.applemarketingtools.com/api/v2/{cc}/music/most-played/200/songs.json"
@@ -34,12 +33,17 @@ LABELS = {"global": "Global", "europe": "Europe", "us": "US", "gb": "UK",
 EU_AGG = ["gb", "de", "fr", "es", "it", "nl", "se"]
 REGION_ORDER = ["global", "us", "europe", "gb", "ca", "au", "de", "fr", "es", "it",
                 "nl", "se", "br", "mx", "jp", "kr", "in"]
-GENRES = {"Pop": 14, "Hip-Hop/Rap": 18, "Country": 6, "R&B/Soul": 15,
-          "Dance": 17, "Electronic": 7, "Rock": 21, "Alternative": 20,
-          "Latin": 12, "K-Pop": 51}
-GENRE_MARKETS = ["us", "gb", "au", "ca", "de", "fr"]
+
+# 14 genres × 12 markets for maximum depth
+GENRES = {
+    "Pop": 14, "Hip-Hop/Rap": 18, "Country": 6, "R&B/Soul": 15,
+    "Dance": 17, "Electronic": 7, "Rock": 21, "Alternative": 20,
+    "Latin": 12, "K-Pop": 51, "Reggae": 24, "Singer/Songwriter": 10,
+    "Soundtrack": 16, "J-Pop": 27,
+}
+GENRE_MARKETS = ["us", "gb", "au", "ca", "de", "fr", "es", "it", "nl", "se", "br", "mx"]
 ITUNES_TAG_MARKETS = ["us", "gb", "au", "ca", "de", "fr", "es", "it", "br", "mx", "jp", "kr"]
-RECENCY_DAYS = 730
+RECENCY_DAYS = 730  # 2 years
 
 
 def norm_key(artist, title):
@@ -101,7 +105,6 @@ def europe_aggregate(raw, period):
 
 
 def parse_itunes_entries(data):
-    """Parse genre tags from any iTunes RSS feed response."""
     entries = data.get("feed", {}).get("entry", [])
     if isinstance(entries, dict): entries = [entries]
     out = {}
@@ -113,20 +116,17 @@ def parse_itunes_entries(data):
         cat = (e.get("category") or {}).get("attributes", {})
         genre = cat.get("label") or cat.get("term") or ""
         if genre:
-            k = norm_key(artist, title)
-            out.setdefault(k, genre)
+            out.setdefault(norm_key(artist, title), genre)
     return out
 
 
 def fetch_itunes_top_tags(cc):
-    """General iTunes top songs — same domain as genre charts, reliable."""
     r = requests.get(ITUNES_TOP.format(cc=cc), headers=HEADERS, timeout=20)
     r.raise_for_status()
     return parse_itunes_entries(r.json())
 
 
 def fetch_apple_top(cc):
-    """Apple Marketing RSS most-played (may be blocked from some IPs)."""
     r = requests.get(APPLE_TOP.format(cc=cc), headers=HEADERS, timeout=20)
     r.raise_for_status()
     out = {}
@@ -140,8 +140,7 @@ def fetch_apple_top(cc):
 def fetch_genre_chart(cc, gid, genre_name):
     r = requests.get(APPLE_GENRE.format(cc=cc, gid=gid), headers=HEADERS, timeout=20)
     r.raise_for_status()
-    data = r.json()
-    entries = data.get("feed", {}).get("entry", [])
+    entries = r.json().get("feed", {}).get("entry", [])
     if isinstance(entries, dict): entries = [entries]
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=RECENCY_DAYS)
     rows = []
@@ -199,7 +198,7 @@ def compute_genre_momentum(data):
 def main():
     t0 = time.time()
 
-    # 1. Spotify charts
+    # 1. Spotify charts (17 markets × 2 periods)
     print("1/5 Spotify charts...")
     raw = {}
     for cc in MARKETS + ["global"]:
@@ -215,8 +214,8 @@ def main():
     data["europe"] = {p: europe_aggregate(raw, p) for p in PERIODS}
     print(f"  done ({int(time.time()-t0)}s)")
 
-    # 2. Genre charts (reliable genre source + dedicated charts)
-    print("2/5 Genre charts...")
+    # 2. Genre charts (14 genres × 12 markets)
+    print("2/5 Genre charts (14 genres × 12 markets)...")
     genre_charts = {}
     genre_tag_map = {}
     for gname, gid in GENRES.items():
@@ -230,14 +229,15 @@ def main():
                         combined.append(r)
             except Exception as e:
                 print(f"  {gname}/{cc} skipped: {e}")
-            time.sleep(0.25)
+            time.sleep(0.2)
         for i, r in enumerate(combined, start=1):
             r["rank"] = i
             r.pop("key", None)
         genre_charts[gname] = combined
-    print(f"  genre chart tags: {len(genre_tag_map)} ({int(time.time()-t0)}s)")
+    gc_total = sum(len(v) for v in genre_charts.values())
+    print(f"  genre chart tags: {len(genre_tag_map)} | genre songs: {gc_total} ({int(time.time()-t0)}s)")
 
-    # 3. iTunes general top songs (same domain, reliable — big genre tag boost)
+    # 3. iTunes general top songs (12 markets, genre tags)
     print("3/5 iTunes top songs (genre tags)...")
     itunes_tags = {}
     for cc in ITUNES_TAG_MARKETS:
@@ -250,7 +250,7 @@ def main():
         time.sleep(0.2)
     print(f"  itunes tags: {len(itunes_tags)} ({int(time.time()-t0)}s)")
 
-    # 4. Apple most-played (bonus cross-ref, may fail)
+    # 4. Apple most-played (bonus cross-ref)
     print("4/5 Apple most-played (bonus)...")
     apple = {}
     for cc in ["us", "gb", "au", "ca"]:
@@ -260,22 +260,20 @@ def main():
                 if k not in apple: apple[k] = v
                 elif not apple[k]["genre"] and v["genre"]: apple[k]["genre"] = v["genre"]
         except Exception as e:
-            print(f"  apple {cc} skipped (expected): {e}")
+            print(f"  apple {cc} skipped: {e}")
         time.sleep(0.2)
     print(f"  apple cross-ref: {len(apple)} ({int(time.time()-t0)}s)")
 
-    # 5. Apply tags + scores
+    # 5. Tag + score
     print("5/5 Tagging + scoring...")
     all_genres = set(genre_charts.keys())
     for reg in data.values():
         for rows in reg.values():
             for r in rows:
                 k = r["key"]
-                # Genre priority: genre chart > iTunes top > Apple most-played
                 g = genre_tag_map.get(k) or itunes_tags.get(k) or ""
                 am = apple.get(k)
-                if not g and am and am.get("genre"):
-                    g = am["genre"]
+                if not g and am and am.get("genre"): g = am["genre"]
                 r["genre"] = g
                 r["on_apple"] = am is not None
                 r["apple_rank"] = am["apple_rank"] if am else None
@@ -285,20 +283,36 @@ def main():
 
     momentum = compute_genre_momentum(data)
 
+    # Count unique songs
+    all_songs = set()
+    for reg in data.values():
+        for rows in reg.values():
+            for r in rows:
+                all_songs.add((r["artist"], r["title"]))
+    for songs in genre_charts.values():
+        for s in songs:
+            all_songs.add((s["artist"], s["title"]))
+
     payload = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "regions": [r for r in REGION_ORDER if r in data],
         "region_labels": LABELS, "periods": PERIODS,
         "genres": sorted(all_genres), "genre_charts": genre_charts,
         "genre_momentum": momentum, "data": data,
+        "stats": {"unique_songs": len(all_songs), "genre_chart_songs": gc_total,
+                  "trending_markets": len(MARKETS) + 1},
     }
     json.dump(payload, open("trend_latest.json", "w"), separators=(",", ":"), default=str)
 
     tagged = sum(1 for reg in data.values() for rows in reg.values() for r in rows if r.get("genre"))
     total = sum(len(rows) for reg in data.values() for rows in reg.values())
-    gc_total = sum(len(v) for v in genre_charts.values())
     elapsed = int(time.time() - t0)
-    print(f"\nDone in {elapsed}s | charts: {total} | tagged: {tagged}/{total} | genre charts: {gc_total} | momentum: {len(momentum)}")
+    print(f"\nDone in {elapsed}s")
+    print(f"  Unique songs: {len(all_songs)}")
+    print(f"  Trending: {total} chart rows | tagged: {tagged}/{total}")
+    print(f"  Genre charts: {gc_total} songs across {len(genre_charts)} genres")
+    print(f"  Genre sizes: { {g: len(v) for g, v in genre_charts.items()} }")
+    print(f"  Momentum: {len(momentum)} genres")
 
 
 if __name__ == "__main__":
