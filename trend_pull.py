@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-PlayMusic Trend Monitor — pull (v9)
-Fixes: genre normalization, removed dead Apple cross-ref, cleaner surface scoring.
+PlayMusic Trend Monitor — pull (v10)
+Adds Last.fm cultural signal: user-generated tags + listener/playcount data
+for top-ranked and surface-pick songs.
+
+Requires env var LASTFM_API_KEY (free, non-commercial: https://www.last.fm/api/account/create)
+If missing, Last.fm enrichment is skipped gracefully — everything else still runs.
 """
 
 import datetime as dt
 import io
 import json
+import os
 import re
 import sys
 import time
@@ -15,11 +20,13 @@ import html as html_mod
 import requests
 import pandas as pd
 
-HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/9.0 (internal ops)"}
+HEADERS = {"User-Agent": "PlayMusic-TrendMonitor/10.0 (internal ops)"}
 
 KWORB = "https://kworb.net/spotify/country/{cc}_{period}.html"
 APPLE_GENRE = "https://itunes.apple.com/{cc}/rss/topsongs/limit=200/genre={gid}/json"
 ITUNES_TOP = "https://itunes.apple.com/{cc}/rss/topsongs/limit=200/json"
+LASTFM_API = "https://ws.audioscrobbler.com/2.0/"
+LASTFM_KEY = os.environ.get("LASTFM_API_KEY", "")
 
 PERIODS = ["daily", "weekly"]
 MARKETS = ["us", "gb", "ca", "au", "de", "fr", "es", "it", "nl", "se",
@@ -40,9 +47,13 @@ GENRES = {
 }
 GENRE_MARKETS = ["us", "gb", "au", "ca", "de", "fr", "es", "it", "nl", "se", "br", "mx"]
 ITUNES_TAG_MARKETS = ["us", "gb", "au", "ca", "de", "fr", "es", "it", "br", "mx", "jp", "kr"]
-RECENCY_DAYS = 730  # 2 years
+RECENCY_DAYS = 730
 
-# Normalize variant genre names to standard ones.
+# Last.fm enrichment budget — top-ranked + surface picks only, time-boxed.
+LASTFM_RANK_CUTOFF = 50
+LASTFM_MAX_LOOKUPS = 600
+LASTFM_TIME_LIMIT = 360  # 6 minutes
+
 GENRE_NORM = {
     "hard rock": "Rock", "soft rock": "Rock", "classic rock": "Rock", "indie rock": "Rock",
     "punk": "Rock", "metal": "Rock", "heavy metal": "Rock", "grunge": "Rock",
@@ -66,16 +77,58 @@ GENRE_NORM = {
     "singer-songwriter": "Singer/Songwriter", "cantautor": "Singer/Songwriter",
     "pop/rock": "Pop", "adult contemporary": "Pop", "teen pop": "Pop",
 }
+# Age-band fit — an EDITORIAL HEURISTIC for content curation, not verified listener
+# demographic data. Weights reflect general genre culture/positioning, not survey data.
+# Gender is intentionally not modeled: no reliable signal exists for it in this data,
+# and inferring it from tags would just encode stereotypes (e.g. "female vocalists"
+# describes the artist, not the audience).
+GENRE_AGE_WEIGHTS = {
+    "Soundtrack":         {"10-14": 60, "13-17": 30, "15-20": 10},
+    "K-Pop":              {"10-14": 45, "13-17": 40, "15-20": 15},
+    "J-Pop":              {"10-14": 45, "13-17": 40, "15-20": 15},
+    "Pop":                {"10-14": 30, "13-17": 40, "15-20": 30},
+    "Dance":              {"10-14": 15, "13-17": 40, "15-20": 45},
+    "Latin":              {"10-14": 25, "13-17": 40, "15-20": 35},
+    "Country":            {"10-14": 15, "13-17": 35, "15-20": 50},
+    "Hip-Hop/Rap":        {"10-14": 10, "13-17": 40, "15-20": 50},
+    "Reggae":             {"10-14": 15, "13-17": 30, "15-20": 55},
+    "R&B/Soul":           {"10-14": 10, "13-17": 30, "15-20": 60},
+    "Electronic":         {"10-14": 10, "13-17": 30, "15-20": 60},
+    "Rock":               {"10-14": 10, "13-17": 30, "15-20": 60},
+    "Alternative":        {"10-14": 10, "13-17": 30, "15-20": 60},
+    "Singer/Songwriter":  {"10-14": 10, "13-17": 25, "15-20": 65},
+}
+YOUNGER_TAG_HINTS = {"disney", "kids", "anime", "cartoon", "children", "movie soundtrack", "family"}
+OLDER_TAG_HINTS = {"explicit", "mature", "sexy", "party", "dark", "drinking", "adult"}
+
+
+def compute_age_fit(genre, tags=None):
+    base = GENRE_AGE_WEIGHTS.get(genre)
+    if not base:
+        return None
+    scores = dict(base)
+    for t in [t.lower() for t in (tags or [])]:
+        if any(h in t for h in YOUNGER_TAG_HINTS):
+            scores["10-14"] += 15
+        if any(h in t for h in OLDER_TAG_HINTS):
+            scores["15-20"] += 15
+    band = max(scores, key=scores.get)
+    total = sum(scores.values()) or 1
+    return {"band": band, "confidence": round(scores[band] / total, 2)}
+LASTFM_TAG_BLOCKLIST = {
+    "seen live", "female vocalists", "male vocalists", "usa", "united states",
+    "spotify", "under 2000 listeners", "beautiful", "awesome", "favorite",
+    "favourites", "love", "00s", "90s", "80s", "70s",
+}
 
 
 def normalize_genre(g):
     if not g: return ""
     lower = g.lower().strip()
     if lower in GENRE_NORM: return GENRE_NORM[lower]
-    # Check if it already matches a standard genre (case-insensitive)
     for std in GENRES:
         if lower == std.lower(): return std
-    return g  # keep original if no mapping
+    return g
 
 
 def norm_key(artist, title):
@@ -180,8 +233,36 @@ def fetch_genre_chart(cc, gid, genre_name):
     return rows
 
 
+def fetch_lastfm_track(artist, title):
+    """Returns {"tags": [...], "listeners": int, "playcount": int} or None."""
+    if not LASTFM_KEY:
+        return None
+    try:
+        r = requests.get(LASTFM_API, headers=HEADERS, timeout=10, params={
+            "method": "track.getInfo", "api_key": LASTFM_KEY,
+            "artist": artist, "track": title, "format": "json", "autocorrect": "1"})
+        if r.status_code != 200:
+            return None
+        d = r.json()
+        t = d.get("track")
+        if not t:
+            return None
+        listeners = _to_int(t.get("listeners"))
+        playcount = _to_int(t.get("playcount"))
+        raw_tags = t.get("toptags", {}).get("tag", [])
+        if isinstance(raw_tags, dict):
+            raw_tags = [raw_tags]
+        tags = []
+        for tg in raw_tags[:8]:
+            name = tg.get("name", "").strip()
+            if name and name.lower() not in LASTFM_TAG_BLOCKLIST:
+                tags.append(name)
+        return {"tags": tags[:5], "listeners": listeners, "playcount": playcount}
+    except Exception:
+        return None
+
+
 def compute_surface(r):
-    """Surface = how strongly this song says 'add to PlayMusic.'"""
     s = 0
     mv = r.get("move", "")
     if mv in ("NEW", "RE"): s += 3
@@ -222,7 +303,7 @@ def main():
     t0 = time.time()
 
     # 1. Spotify charts
-    print("1/4 Spotify charts...")
+    print("1/5 Spotify charts...")
     raw = {}
     for cc in MARKETS + ["global"]:
         for p in PERIODS:
@@ -238,7 +319,7 @@ def main():
     print(f"  done ({int(time.time()-t0)}s)")
 
     # 2. Genre charts
-    print("2/4 Genre charts (14 × 12)...")
+    print("2/5 Genre charts (14 × 12)...")
     genre_charts = {}
     genre_tag_map = {}
     for gname, gid in GENRES.items():
@@ -257,23 +338,22 @@ def main():
             r["rank"] = i
             r.pop("key", None)
         genre_charts[gname] = combined
-    print(f"  genre chart tags: {len(genre_tag_map)} ({int(time.time()-t0)}s)")
+    print(f"  genre tags: {len(genre_tag_map)} ({int(time.time()-t0)}s)")
 
     # 3. iTunes general top songs (genre tag boost)
-    print("3/4 iTunes top songs (genre tags)...")
+    print("3/5 iTunes top songs (genre tags)...")
     itunes_tags = {}
     for cc in ITUNES_TAG_MARKETS:
         try:
-            tags = fetch_itunes_top_tags(cc)
-            for k, g in tags.items():
+            for k, g in fetch_itunes_top_tags(cc).items():
                 itunes_tags.setdefault(k, g)
         except Exception as e:
             print(f"  itunes {cc} skipped: {e}")
         time.sleep(0.2)
     print(f"  itunes tags: {len(itunes_tags)} ({int(time.time()-t0)}s)")
 
-    # 4. Tag + score
-    print("4/4 Tagging + scoring...")
+    # 4. Tag genre + compute surface on trending
+    print("4/5 Tagging + scoring...")
     all_genres = set(genre_charts.keys())
     for reg in data.values():
         for rows in reg.values():
@@ -282,20 +362,57 @@ def main():
                 g = genre_tag_map.get(k) or itunes_tags.get(k) or ""
                 r["genre"] = normalize_genre(g)
                 r["surface"] = compute_surface(r)
+                af = compute_age_fit(r["genre"])
+                if af: r["age_fit"] = af
                 if r["genre"]: all_genres.add(r["genre"])
+
+    # 5. Last.fm enrichment — top-ranked + surface picks only
+    print("5/5 Last.fm cultural signal...")
+    if not LASTFM_KEY:
+        print("  LASTFM_API_KEY not set — skipping (everything else still works)")
+    lastfm_cache = {}
+    if LASTFM_KEY:
+        candidates = {}
+        for reg in data.values():
+            for rows in reg.values():
+                for r in rows:
+                    if r["rank"] <= LASTFM_RANK_CUTOFF or r.get("surface", 0) >= 3:
+                        candidates[r["key"]] = (r["artist"], r["title"])
+        candidates = list(candidates.items())
+        print(f"  candidates: {len(candidates)}")
+        lt0, done = time.time(), 0
+        for k, (artist, title) in candidates:
+            if done >= LASTFM_MAX_LOOKUPS or (time.time() - lt0) > LASTFM_TIME_LIMIT:
+                print(f"  stopped at budget/time limit ({done} done)")
+                break
+            info = fetch_lastfm_track(artist, title)
+            if info:
+                lastfm_cache[k] = info
+            done += 1
+            time.sleep(0.25)
+        print(f"  enriched: {len(lastfm_cache)}/{done} attempted ({int(time.time()-t0)}s)")
+
+    for reg in data.values():
+        for rows in reg.values():
+            for r in rows:
+                lf = lastfm_cache.get(r["key"])
+                if lf:
+                    r["tags"] = lf["tags"]
+                    r["listeners"] = lf["listeners"]
+                    r["playcount"] = lf["playcount"]
+                    # Recompute with tag nudges now that tags are available.
+                    af = compute_age_fit(r.get("genre", ""), lf["tags"])
+                    if af: r["age_fit"] = af
                 r.pop("key", None)
 
     momentum = compute_genre_momentum(data)
 
-    # Stats
     all_songs = set()
     for reg in data.values():
         for rows in reg.values():
-            for r in rows:
-                all_songs.add((r["artist"], r["title"]))
+            for r in rows: all_songs.add((r["artist"], r["title"]))
     for songs in genre_charts.values():
-        for s in songs:
-            all_songs.add((s["artist"], s["title"]))
+        for s in songs: all_songs.add((s["artist"], s["title"]))
 
     tagged = sum(1 for reg in data.values() for rows in reg.values() for r in rows if r.get("genre"))
     total = sum(len(rows) for reg in data.values() for rows in reg.values())
@@ -310,16 +427,15 @@ def main():
         "stats": {"unique_songs": len(all_songs), "genre_chart_songs": gc_total,
                   "trending_tagged": tagged, "trending_total": total,
                   "surface_picks": sum(1 for reg in data.values() for rows in reg.values()
-                                       for r in rows if r.get("surface", 0) >= 3)},
+                                       for r in rows if r.get("surface", 0) >= 3),
+                  "lastfm_enriched": len(lastfm_cache)},
     }
     json.dump(payload, open("trend_latest.json", "w"), separators=(",", ":"), default=str)
 
     elapsed = int(time.time() - t0)
     print(f"\nDone in {elapsed}s")
-    print(f"  Unique songs: {len(all_songs)}")
-    print(f"  Trending: {total} rows | tagged: {tagged}/{total}")
-    print(f"  Genre charts: {gc_total} across {len(genre_charts)} genres")
-    print(f"  Momentum: {len(momentum)} genres")
+    print(f"  Unique songs: {len(all_songs)} | Trending tagged: {tagged}/{total}")
+    print(f"  Genre charts: {gc_total} | Last.fm enriched: {len(lastfm_cache)}")
 
 
 if __name__ == "__main__":
