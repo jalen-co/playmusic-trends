@@ -25,6 +25,8 @@ jobs:
         run: pip install requests pandas lxml
 
       - name: Pull trends
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
         run: python trend_pull.py
 
       - name: Commit data
